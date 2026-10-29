@@ -6,11 +6,12 @@
 # head is that named head and is already stored on the forge.
 # The watcher check source is byte-for-byte bin/fm-pr-poll.sh; task and PR data
 # live only in a private sidecar and are never interpolated into shell source.
-# A GitHub pull request URL, a GitLab merge request URL, and a Gerrit change URL
-# are all accepted, including a merge request or change on a self-hosted
-# instance and a GitHub Enterprise pull request on a host this home names in
+# A GitHub pull request URL, a GitLab merge request URL, a Gerrit change URL, a
+# Forgejo pull request URL, and a Cursor Origin pull request URL are all
+# accepted, including a merge request or change on a self-hosted instance and a
+# GitHub Enterprise pull request on a host this home names in
 # config/github-hosts.
-# A GitHub pull request the forge reports as a draft is refused, naming the draft
+# A GitHub or Origin pull request the forge reports as a draft is refused, naming the draft
 # state and recording and arming nothing: a draft cannot be merged, so a poll armed on it
 # would wait for an event that cannot occur while nobody is asked to act.
 # Mark the pull request ready for review, then arm again; a lane that keeps a
@@ -128,20 +129,40 @@ if [ "$PROVIDER" = forgejo ]; then
   }
 fi
 
+# Refuse to arm an Origin watch with no origin or jq on PATH, for the same
+# reason. The pull request is then read once: a positive draft reading refuses
+# below, and its head is the forge-reported pr_head. An unreadable record does
+# not refuse, matching the GitHub reads.
+ORIGIN_READ=0
+if [ "$PROVIDER" = origin ]; then
+  if ! command -v origin >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    echo "error: watching a Cursor Origin pull request requires origin and jq on PATH" >&2
+    exit 1
+  fi
+  if fm_pr_origin_read_record "$HOST" "$PROJECT_PATH" "$NUMBER"; then
+    ORIGIN_READ=1
+  fi
+fi
+
 # The draft state is read before anything is recorded or armed. Only a positive
 # draft reading refuses, because an unreadable one must not block arming.
+DRAFT_REFUSAL="error: $URL is a draft pull request; a draft cannot be merged, so merge monitoring would wait for an event that cannot occur - mark it ready for review and arm again, or declare a wait instead of done if the draft is deliberate"
 if [ "$PROVIDER" = github ] && [ "${FM_PR_CHECK_MERGE:-}" != 1 ] && command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   DRAFT_JSON=$(gh pr view "$URL" --json isDraft 2>/dev/null || true)
   if [ "$(fm_pr_json_draft_state "$DRAFT_JSON")" = true ]; then
-    echo "error: $URL is a draft pull request; a draft cannot be merged, so merge monitoring would wait for an event that cannot occur - mark it ready for review and arm again, or declare a wait instead of done if the draft is deliberate" >&2
+    echo "$DRAFT_REFUSAL" >&2
     exit 1
   fi
+fi
+if [ "$ORIGIN_READ" = 1 ] && [ "${FM_PR_CHECK_MERGE:-}" != 1 ] && [ "$FM_PR_RECORD_DRAFT" = true ]; then
+  echo "$DRAFT_REFUSAL" >&2
+  exit 1
 fi
 
 "$FM_ROOT/bin/fm-guard.sh" || true
 
-# pr_head is recorded only when the forge's CLI can supply it. gh exposes the
-# head commit as a selectable field; plain glab exposes it only inside its JSON
+# pr_head is recorded only when the forge's CLI can supply it. gh and origin
+# expose the head commit as a selectable field; plain glab exposes it only inside its JSON
 # output, which would need a JSON processor firstmate does not require, and
 # tea's single-PR view ignores field selection entirely, so neither a GitLab
 # nor a Forgejo task records a pr_head here, and neither does a Gerrit task: a
@@ -163,6 +184,9 @@ if [ "$PROVIDER" = github ] && [ -n "$WT" ] && [ -d "$WT" ] && command -v gh >/d
     && fm_pr_head_valid "$REMOTE_HEAD"; then
     PR_HEAD=$REMOTE_HEAD
   fi
+fi
+if [ "$ORIGIN_READ" = 1 ]; then
+  PR_HEAD=$FM_PR_RECORD_HEAD
 fi
 
 MODE=$(grep '^mode=' "$META" | tail -1 | cut -d= -f2- || true)

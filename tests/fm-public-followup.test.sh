@@ -3337,6 +3337,19 @@ test_emit_refuses_a_deliverable_tasks_axi_would_reject() {
   pass "the emitter refuses a deliverable tasks-axi would reject, naming key, value, and format"
 }
 
+# Firstmate watches a Cursor Origin pull request, but tasks-axi takes no Origin
+# link as a pr_url, so the refusal names that gap rather than only the shape.
+test_origin_pr_url_refusal_names_the_tasks_axi_gap() {
+  local out rc=0
+  out=$(bash -c '. "$1/bin/fm-public-followup-lib.sh"
+    fm_pf_deliverable_problem pr-merged pr-merged pr_url https://cursor.com/codebase/acme/repo/pull/12' _ "$ROOT" 2>&1) \
+    || rc=$?
+  [ "$rc" -ne 0 ] || fail "an Origin pull request URL was accepted as a pr_url tasks-axi rejects"
+  assert_contains "$out" "is a Cursor Origin pull request, which tasks-axi does not accept as a pr_url yet" \
+    "the Origin refusal did not name the tasks-axi gap"
+  pass "a Cursor Origin pr_url is refused with the tasks-axi gap named"
+}
+
 # A repeated --deliverable key would serialize only its last value, so which
 # value was meant is ambiguous; the emitter refuses it by name in both modes
 # rather than judging or publishing either value.
@@ -3580,6 +3593,7 @@ pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://github.com/example/repo/pull/1
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://github.com/org/example/repo/pull/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://git.example.com/../repo/pulls/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://git.example.com:8443/acme/repo/pulls/12"}|reject
+pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://cursor.com/codebase/acme/repo/pull/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"report_path":"data/work-a/report.md"}|reject
 local-main|["commit_sha"]|local-main|{"commit_sha":"0123ABC"}|reject
 local-main|["commit_sha"]|local-main|{"commit_sha":"012"}|reject
@@ -4003,6 +4017,7 @@ test_remote_collection_is_idempotent
 test_stage_in_refuses_ambiguous_or_unusable_homes
 test_brief_prefills_known_deliverables_and_states_formats
 test_emit_refuses_a_deliverable_tasks_axi_would_reject
+test_origin_pr_url_refusal_names_the_tasks_axi_gap
 test_emit_refuses_a_repeated_deliverable_key
 test_emit_refuses_a_missing_required_deliverable
 test_emit_rules_agree_with_tasks_axi

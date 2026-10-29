@@ -1739,6 +1739,37 @@ test_terminal_passed_with_forgejo_pull_reports_its_state() {
   pass "terminal passed run reads Forgejo pull request state through tea api"
 }
 
+# A no-mistakes run on an Origin project skips the pr and ci steps, so its PR
+# identity comes from the recorded pr=, and the state is read through
+# `origin pr view`, which spells a draft as its own status.
+test_terminal_passed_with_origin_pull_reports_its_state() {
+  reset_fakes
+  local d read_log out spec status fail expected name url=https://cursor.com/codebase/team/repo/pull/12
+  for spec in "open|open|0|run passed: PR open" \
+    "draft|draft|0|run passed: PR draft" \
+    "merged|merged|0|run passed: PR merged" \
+    "closed|closed|0|run passed: PR closed" \
+    "unreadable|merged|1|run passed: PR state unknown (unreadable)"; do
+    IFS='|' read -r name status fail expected <<<"$spec"
+    d=$(new_case "passed-origin-$name")
+    make_repo_on_branch "$d/wt" "fm/feat-dorigin$name"
+    make_fakebin "$d" >/dev/null
+    fm_fake_origin "$d/fakebin"
+    fm_write_meta "$d/state/feat-dorigin$name.meta" "window=fm:fm-feat-dorigin$name" \
+      "worktree=$d/wt" "kind=ship" "pr=$url"
+    read_log="$d/origin-read.log"
+    : > "$read_log"
+    FM_FAKE_AXI_STATUS="$(run_passed_with_pr "fm/feat-dorigin$name" "$url")"
+    out=$(FM_TEST_ORIGIN_STATUS=$status FM_TEST_ORIGIN_FAIL=$fail FM_TEST_ORIGIN_LOG=$read_log \
+      run_crew_state "$d" "feat-dorigin$name")
+    assert_contains "$out" "$expected" "Origin pull request reading $name is reported"
+    [ "$name" = merged ] || assert_not_contains "$out" "PR merged" "Origin $name pull request must not be reported merged"
+    assert_grep 'pr view 12 -R team/repo --json ' "$read_log" \
+      "Origin read names the pull request number and the parsed org/repository"
+  done
+  pass "terminal passed run reads Origin pull request state through origin pr view"
+}
+
 test_terminal_passed_with_open_gerrit_change_does_not_claim_merged() {
   reset_fakes
   local d url read_log out
@@ -6132,6 +6163,7 @@ test_terminal_passed_run_pr_overrides_stale_metadata
 test_terminal_passed_without_readable_pr_identity_reports_unknown
 test_terminal_passed_with_open_gitlab_mr_does_not_claim_merged
 test_terminal_passed_with_forgejo_pull_reports_its_state
+test_terminal_passed_with_origin_pull_reports_its_state
 test_terminal_passed_with_merged_gitlab_mr_reports_merged
 test_terminal_passed_with_failed_gitlab_read_reports_unknown
 test_terminal_passed_with_open_gerrit_change_does_not_claim_merged

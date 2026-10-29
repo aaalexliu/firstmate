@@ -647,6 +647,59 @@ SH
   chmod +x "$fakebin/$tool"
 }
 
+# fm_fake_origin <fakebin>
+# Drops a Cursor Origin CLI stub that answers `origin pr view <n> -R <org>/<repo>
+# --json <fields>` the way the real CLI does (docs/origin-cli-integration.md):
+# one compact JSON object holding exactly the requested fields, its url built
+# from <org>/<repo> and <n>. Each field reads an override: FM_TEST_ORIGIN_STATUS
+# (open), FM_TEST_ORIGIN_DRAFT (false), FM_TEST_ORIGIN_HEAD (a fixed commit id),
+# FM_TEST_ORIGIN_MERGE_COMMIT (null until set), and FM_TEST_ORIGIN_URL (the
+# canonical URL); mergedAt is set only while the status is merged.
+# FM_TEST_ORIGIN_RAW replaces the whole output, FM_TEST_ORIGIN_FAIL=1 fails the
+# call with no output, and FM_TEST_ORIGIN_LOG, when set, receives each argv.
+# Any other subcommand exits 2. The stub needs jq on PATH.
+fm_fake_origin() {
+  local fakebin=$1
+  cat > "$fakebin/origin" <<'SH'
+#!/usr/bin/env bash
+[ -z "${FM_TEST_ORIGIN_LOG:-}" ] || printf '%s\n' "$*" >> "$FM_TEST_ORIGIN_LOG"
+[ "${1:-} ${2:-}" = "pr view" ] || exit 2
+shift 2
+number= repo= fields=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -R|--repo) repo=${2:-}; shift 2 ;;
+    --json) fields=${2:-}; shift 2 ;;
+    *) number=$1; shift ;;
+  esac
+done
+[ -n "$number" ] && [ -n "$repo" ] && [ -n "$fields" ] || exit 2
+[ "${FM_TEST_ORIGIN_FAIL:-0}" = 0 ] || exit 1
+if [ -n "${FM_TEST_ORIGIN_RAW:-}" ]; then
+  printf '%s\n' "$FM_TEST_ORIGIN_RAW"
+  exit 0
+fi
+status=${FM_TEST_ORIGIN_STATUS:-open}
+merged_at=null
+[ "$status" != merged ] || merged_at='"2026-10-29T22:10:00Z"'
+merge_commit=null
+[ -z "${FM_TEST_ORIGIN_MERGE_COMMIT:-}" ] || merge_commit="\"$FM_TEST_ORIGIN_MERGE_COMMIT\""
+jq -cn --arg fields "$fields" \
+  --arg status "$status" \
+  --argjson draft "${FM_TEST_ORIGIN_DRAFT:-false}" \
+  --arg head "${FM_TEST_ORIGIN_HEAD:-0123456789abcdef0123456789abcdef01234567}" \
+  --argjson merge_commit "$merge_commit" \
+  --argjson merged_at "$merged_at" \
+  --arg url "${FM_TEST_ORIGIN_URL:-https://cursor.com/codebase/$repo/pull/$number}" \
+  --argjson number "$number" '
+  {number: $number, status: $status, isDraft: $draft, headSha: $head,
+   headRef: "fm/task", baseRef: "main", mergeCommitSha: $merge_commit,
+   mergedAt: $merged_at, url: $url}
+  | with_entries(select(.key as $k | ($fields | split(",") | index($k)) != null))'
+SH
+  chmod +x "$fakebin/origin"
+}
+
 # fm_fake_claude_outside_read_gate <fakebin>
 # Drops a claude stub that models the 2.1.257 outside-read gate instead of
 # answering like a generic exit-0 tool: it resolves its own cwd and every

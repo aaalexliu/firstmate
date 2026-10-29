@@ -384,6 +384,14 @@ fm_pf_deliverable_problem() {
   if [ -n "$re" ] && printf '%s\n' "$value" | LC_ALL=C grep -Eq "$re"; then
     return 0
   fi
+  # Firstmate watches a Cursor Origin pull request, but tasks-axi's isPrUrl
+  # takes no Origin link, so the refusal names that gap rather than the shape.
+  case "$key:$value" in
+    pr_url:https://cursor.com/codebase/*/pull/*)
+      printf "deliverable '%s' value '%s' is a Cursor Origin pull request, which tasks-axi does not accept as a pr_url yet; expected %s\n" "$key" "$value" "$format"
+      return 1
+      ;;
+  esac
   printf "deliverable '%s' value '%s' is not valid; expected %s\n" "$key" "$value" "$format"
   return 1
 }

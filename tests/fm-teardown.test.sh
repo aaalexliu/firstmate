@@ -843,6 +843,24 @@ SH
   pass "teardown closes a landed GitLab task with its merge request URL as a note and GitHub and Forgejo tasks with --pr"
 }
 
+# tasks-axi takes no Cursor Origin link as --pr, so a landed Origin task closes
+# its backlog item with the pull request URL as a note.
+test_teardown_closes_an_origin_task_with_its_pr_url_as_a_note() {
+  local case_dir out url=https://cursor.com/codebase/team/repo/pull/12
+  case_dir=$(make_case tasks-axi-close-origin)
+  write_meta "$case_dir" no-mistakes ship
+  printf 'pr=%s\n' "$url" >> "$case_dir/state/task-x1.meta"
+  seed_backlog_in_flight "$case_dir"
+  fm_fake_origin "$case_dir/fakebin"
+  out=$(FM_TEST_ORIGIN_STATUS=merged run_teardown "$case_dir" 2>&1) || fail "teardown of a landed Origin task failed: $out"
+  [ "$(backlog_row_state "$case_dir")" = "done" ] \
+    || fail "teardown left a landed Origin task's backlog item at $(backlog_row_state "$case_dir"): $out"
+  tasks-axi show task-x1 --file "$case_dir/data/backlog.md" --full \
+    | grep -F "body: \"Origin pull request $url\"" >/dev/null \
+    || fail "closed Origin backlog item did not record its pull request URL as a note"
+  pass "teardown closes a landed Origin task with its pull request URL as a note"
+}
+
 test_teardown_manual_backend_leaves_the_backlog_to_the_operator() {
   local case_dir out backlog_path
   case_dir=$(make_case tasks-axi-manual-optout)
@@ -1187,6 +1205,85 @@ test_squash_merged_forgejo_pr_allows_when_main_moved_on() {
       || fail "forgejo-merged-$merged: teardown did not read the Forgejo pull request through tea"
   done
   pass "teardown proves a Forgejo task landed from the merged pull request when the content check is inconclusive"
+}
+
+# A Cursor Origin task, set up like the Forgejo case above, proves it landed
+# only through the merged record `origin pr view` returns: with the status
+# merged teardown proceeds, and with it open the same history refuses. Origin
+# serves no refs/pull/<n>/head, so when this copy lacks the reported head it is
+# fetched by its commit id.
+move_main_past_squash() {  # <case-dir>
+  local tmp="$1/_main_later"
+  git clone -q "$1/origin.git" "$tmp"
+  printf '%s\n' base main-edit feature-edit-reworded > "$tmp/shared.txt"
+  git -C "$tmp" add -- shared.txt
+  git -C "$tmp" -c user.email=t@t -c user.name=t commit -q -m "main rewords shared"
+  git -C "$tmp" push -q origin main
+  rm -rf "$tmp"
+}
+
+test_squash_merged_origin_pr_allows_when_main_moved_on() {
+  local case_dir rc pr_head status expected url=https://cursor.com/codebase/team/repo/pull/7
+  for status in merged open; do
+    case_dir=$(make_case "origin-merged-$status")
+    write_meta "$case_dir" no-mistakes ship
+    pr_head=$(setup_squash_rebased_history "$case_dir" rebased)
+    move_main_past_squash "$case_dir"
+    printf '%s\n' "pr=$url" "pr_head=$pr_head" >> "$case_dir/state/task-x1.meta"
+    add_gh_axi_error "$case_dir"
+    fm_fake_origin "$case_dir/fakebin"
+
+    set +e
+    FM_TEST_ORIGIN_STATUS=$status FM_TEST_ORIGIN_HEAD=$pr_head FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+      run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+    rc=$?
+    set -e
+
+    expected=1
+    [ "$status" = open ] || expected=0
+    expect_code "$expected" "$rc" "origin-merged-$status: teardown exit"$'\n'"$(cat "$case_dir/stderr")"
+    grep -qF -- 'pr view 7 -R team/repo --json ' "$case_dir/origin.log" \
+      || fail "origin-merged-$status: teardown did not read the Origin pull request through origin"
+  done
+
+  # The copy stops one commit short of the reported head, whose object it no
+  # longer holds, and the remote keeps that head on a branch but serves no
+  # refs/pull/7/head, as Origin does. Main also rewrites the file that commit
+  # adds, so the content check stays inconclusive and only the merged record
+  # can prove the work landed: an open record refuses first.
+  case_dir=$(make_case origin-head-fetched-by-id)
+  write_meta "$case_dir" no-mistakes ship
+  pr_head=$(setup_squash_rebased_history "$case_dir" rebased)
+  move_main_past_squash "$case_dir"
+  git clone -q "$case_dir/origin.git" "$case_dir/_feature_later"
+  printf '%s\n' hello-reworded > "$case_dir/_feature_later/feature.txt"
+  git -C "$case_dir/_feature_later" -c user.email=t@t -c user.name=t commit -q -am "main rewords feature"
+  git -C "$case_dir/_feature_later" push -q origin main
+  rm -rf "$case_dir/_feature_later"
+  git -C "$case_dir/origin.git" update-ref refs/heads/fm/task-x1 "$pr_head"
+  git -C "$case_dir/origin.git" update-ref -d refs/pull/7/head
+  git -C "$case_dir/wt" reset -q --hard HEAD~1
+  git -C "$case_dir/wt" update-ref -d refs/fm-test/pr-head
+  git -C "$case_dir/wt" reflog expire --expire=now --all
+  git -C "$case_dir/wt" gc -q --prune=now
+  ! git -C "$case_dir/wt" cat-file -e "$pr_head^{commit}" 2>/dev/null \
+    || fail "origin-head-fetched-by-id: the copy still holds the reported head"
+  printf '%s\n' "pr=$url" >> "$case_dir/state/task-x1.meta"
+  add_gh_axi_error "$case_dir"
+  fm_fake_origin "$case_dir/fakebin"
+  set +e
+  FM_TEST_ORIGIN_STATUS=open FM_TEST_ORIGIN_HEAD=$pr_head \
+    run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  expect_code 1 "$rc" "origin-head-fetched-by-id: teardown with an open record should refuse"$'\n'"$(cat "$case_dir/stderr")"
+  set +e
+  FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_HEAD=$pr_head \
+    run_teardown "$case_dir" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-head-fetched-by-id: teardown exit"$'\n'"$(cat "$case_dir/stderr")"
+  pass "teardown proves an Origin task landed from the merged pull request, fetching its head by id, when the content check is inconclusive"
 }
 
 test_squash_merged_same_file_different_content_refuses() {
@@ -6011,6 +6108,8 @@ test_merged_pr_patch_matching_preserves_indentation
 test_merged_pr_with_later_local_commit_refuses
 test_squash_merged_rebased_branch_allows
 test_squash_merged_forgejo_pr_allows_when_main_moved_on
+test_squash_merged_origin_pr_allows_when_main_moved_on
+test_teardown_closes_an_origin_task_with_its_pr_url_as_a_note
 test_squash_merged_same_file_different_content_refuses
 test_squash_merged_rebased_local_with_unlanded_commit_refuses
 test_squash_merged_stale_local_refuses_when_forge_unreachable

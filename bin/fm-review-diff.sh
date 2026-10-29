@@ -31,9 +31,12 @@
 # neither PR head can be resolved, fall back to the local branch with a warning.
 # A GitLab merge request and a Gerrit change expose no comparable ref and record
 # no pr_head, so a task recording one always takes that warning path;
-# docs/architecture.md owns that fallback. Without pr=, compare the task's
-# immutable ship branch recorded in state/<id>.meta ("fm/<id>" for records
-# created before that field existed), or the worktree's checked-out branch when
+# docs/architecture.md owns that fallback. A Cursor Origin pull request serves
+# no refs/pull/<n>/head, so its compare side is the head commit the forge
+# reports now (fm_pr_origin_read_record), fetched by id when this copy lacks
+# it, before the same recorded pr_head and local-branch fallbacks.
+# Without pr=, compare the task's immutable ship branch recorded in
+# state/<id>.meta ("fm/<id>" for records created before that field existed), or the worktree's checked-out branch when
 # that branch does not exist in the worktree. A recorded branch that is not a
 # valid git branch name is refused instead of taking that fallback, the same
 # refusal fm-merge-local.sh applies, so a corrupt meta record can never turn a
@@ -47,6 +50,8 @@ FM_ROOT="${FM_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 FM_HOME="${FM_HOME:-${FM_ROOT_OVERRIDE:-$FM_ROOT}}"
 STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
+# shellcheck source=bin/fm-pr-lib.sh
+. "$SCRIPT_DIR/fm-pr-lib.sh"
 "$FM_ROOT/bin/fm-guard.sh" || true
 
 usage() {
@@ -144,9 +149,33 @@ fetch_pull_head() {
   printf '%s' "$resolved"
 }
 
+# The head an Origin pull request reports now, fetched by commit id when this
+# copy does not hold it yet.
+fetch_origin_head() {  # <pr-url>
+  local head
+  head=$(fm_pr_url_parse "$1" && [ "$FM_PR_PROVIDER" = origin ] \
+    && fm_pr_origin_read_record "$FM_PR_HOST" "$FM_PR_PATH" "$FM_PR_NUMBER" \
+    && printf '%s' "$FM_PR_RECORD_HEAD") || return 1
+  fm_pr_head_valid "$head" || return 1
+  if ! git -C "$WT" cat-file -e "$head^{commit}" 2>/dev/null; then
+    git -C "$WT" remote get-url origin >/dev/null 2>&1 || return 1
+    git -C "$WT" fetch --quiet origin "$head" >/dev/null 2>&1 || return 1
+    git -C "$WT" cat-file -e "$head^{commit}" 2>/dev/null || return 1
+  fi
+  printf '%s' "$head"
+}
+
 resolve_pr_head() {
   local pr_url=$1 recorded_head=$2 n resolved
-  n=$(pr_number_from_target "$pr_url") || true
+  if ( fm_pr_url_parse "$pr_url" && [ "$FM_PR_PROVIDER" = origin ] ); then
+    if resolved=$(fetch_origin_head "$pr_url"); then
+      printf '%s' "$resolved"
+      return 0
+    fi
+    n=
+  else
+    n=$(pr_number_from_target "$pr_url") || true
+  fi
   if [ -n "$n" ]; then
     if resolved=$(fetch_pull_head "$n"); then
       printf '%s' "$resolved"
