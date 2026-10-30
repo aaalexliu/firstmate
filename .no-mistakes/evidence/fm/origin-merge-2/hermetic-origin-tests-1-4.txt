@@ -1,0 +1,4 @@
+ok - fm-pr-merge merges a green Cursor Origin pull request bound to its recorded head and reports the merge commit
+ok - fm-pr-check records the Origin-reported head at registration, and fm-pr-merge merges at that head
+ok - fm-pr-merge refuses on each Cursor Origin pre-merge condition independently
+ok - fm-pr-merge reports every failing Cursor Origin condition together

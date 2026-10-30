@@ -1,0 +1,19 @@
+$ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  1 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+armed: state/task-live.check.sh
+exit=0
+$ grep -E '^(pr|pr_head)=' state/task-live.meta
+pr=https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+pr_head=12da6393fec2162659a76555223acab4a3b68b8f
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+WARNING: watcher still down (same stale episode; last beat: never, grace 300s) - full banner already printed this episode.
+armed: state/task-live.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+  - no check has reported at head 12da6393fec2162659a76555223acab4a3b68b8f
+exit=1

@@ -1,0 +1,16 @@
+$ origin pr view 17 -R aaalexliu/fm-origin-sandbox --json number,status,parentChangeId,stackId,mergeability --jq '{number,status,parentChangeId,stackId,mergeable:.mergeability.mergeable,state:.mergeability.mergeConflictState}'
+{"number":17,"status":"open","parentChangeId":"pr_01m66e4m8rf62sfd1j32vezbjn","stackId":"stk_01m66e4p85frzr6cs7fny4ws09","mergeable":true,"state":"MERGE_CONFLICT_STATE_CLEAN"}
+$ fm-pr-check.sh task-stack https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/17
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+armed: state/task-stack.check.sh
+exit=0
+$ fm-pr-merge.sh task-stack https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/17 --allow-no-pipeline
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+armed: state/task-stack.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/17
+  - the pull request is stacked on parent change pr_01m66e4m8rf62sfd1j32vezbjn; merging it would land every open pull request from the stack root through it in one commit
+exit=1
+$ origin pr view 16 -R aaalexliu/fm-origin-sandbox --json status
+{"status":"open"}
+$ origin pr view 17 -R aaalexliu/fm-origin-sandbox --json status
+{"status":"open"}

@@ -1,0 +1,29 @@
+$ origin pr view 18 ... (draft)
+{"status":"draft","isDraft":true,"hasMergeConflicts":false,"state":"MERGE_CONFLICT_STATE_PENDING"}
+$ fm-pr-check.sh task-draft https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/18
+error: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/18 is a draft pull request; a draft cannot be merged, so merge monitoring would wait for an event that cannot occur - mark it ready for review and arm again, or declare a wait instead of done if the draft is deliberate
+exit=1
+$ fm-pr-merge.sh task-draft https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/18 --allow-no-pipeline
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+armed: state/task-draft.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/18
+  - status is "draft", not open
+  - the pull request is a draft
+  - no head was recorded for this pull request before this run, so the live head d859dbb9dc94d3dc5fcd53c0f794df1546adaa9d cannot be confirmed
+  - mergeable is "false", not true (blockers: change-is-draft)
+  - mergeConflictState is MERGE_CONFLICT_STATE_PENDING: Origin is still checking for conflicts, which is not a clean answer
+exit=1
+$ origin pr view 6 ... (conflicting)
+{"status":"open","mergeable":false,"hasMergeConflicts":true,"state":"MERGE_CONFLICT_STATE_CONFLICTS"}
+$ fm-pr-check.sh task-conflict https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+armed: state/task-conflict.check.sh
+exit=0
+$ fm-pr-merge.sh task-conflict https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6 --allow-no-pipeline
+WARNING: queued wakes pending - drain them with bin/fm-wake-drain.sh before anything else.
+armed: state/task-conflict.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+  - mergeable is "false", not true (blockers: stack-conflicts-with-root-base)
+  - hasMergeConflicts is "true", not false
+  - mergeConflictState is "MERGE_CONFLICT_STATE_CONFLICTS", not MERGE_CONFLICT_STATE_CLEAN
+exit=1

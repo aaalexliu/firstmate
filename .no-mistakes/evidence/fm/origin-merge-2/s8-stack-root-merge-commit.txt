@@ -1,0 +1,12 @@
+$ fm-pr-check.sh task-root https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/16
+armed: state/task-root.check.sh
+exit=0
+$ fm-pr-merge.sh task-root https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/16 --allow-no-pipeline -- --merge
+armed: state/task-root.check.sh
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/16 is open and mergeable at the recorded head 55a93d448498afa3addf9f29d9e265d342329b0a, with no checks, waived by --allow-no-pipeline
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/16 is merged as commit 4f0f3411345689c3f1e3a9e0a5e88f251c2a96ec at 2026-10-30T12:57:44Z
+exit=0
+$ git log --format="%H %P %s" -1 origin/main
+4f0f3411345689c3f1e3a9e0a5e88f251c2a96ec a94d56b54e0e28b3cb5ca1ea878ce206f79fb7c9 55a93d448498afa3addf9f29d9e265d342329b0a Gate stack root (#16)
+$ origin pr view 17 ... (child after root merged)
+{"status":"open"}

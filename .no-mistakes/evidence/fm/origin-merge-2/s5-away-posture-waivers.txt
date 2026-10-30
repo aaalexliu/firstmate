@@ -1,0 +1,18 @@
+$ fm-afk-contract.sh enter --words 'merge passing PRs while I am out'
+exit=0
+$ fm-afk-contract.sh mode
+away
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-no-pipeline
+error: --allow-no-pipeline is attended-only; while the away-posture record exists a GitLab merge requires a successful head pipeline and a Cursor Origin merge requires green checks
+exit=2
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-red build
+error: --allow-red is attended-only; while the away-posture record exists the green check is absolute
+exit=2
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+armed: state/task-live.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+  - the live head 398dda4a1ab0b2091c2325cc3e5102a406149155 is not the recorded head 12da6393fec2162659a76555223acab4a3b68b8f; the moved head must be reviewed and re-reported done, which registers it, before it can merge
+  - no check has reported at head 398dda4a1ab0b2091c2325cc3e5102a406149155
+exit=1
+$ grep '^pr_head=' state/task-live.meta
+pr_head=12da6393fec2162659a76555223acab4a3b68b8f

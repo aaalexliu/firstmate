@@ -1,0 +1,20 @@
+ok - fm-pr-merge refuses a Cursor Origin merge with no recorded head to confirm
+PASS: 
+ok - fm-pr-merge keeps refusing a moved Cursor Origin head on retry until a fresh registration records it
+PASS: 
+ok - fm-pr-merge refuses a Cursor Origin pull request whose state, checks, or head it cannot read
+PASS: 
+ok - fm-pr-merge --allow-red waives only the named Cursor Origin check, failing or running, and only while attended
+PASS: 
+ok - fm-pr-merge --allow-no-pipeline waives only a Cursor Origin pull request with no checks, while attended
+PASS: 
+ok - fm-pr-merge merges Origin with the named method or squash, leaves a disallowed one for Origin to refuse, and refuses every other extra argument
+PASS: 
+ok - fm-pr-merge refuses a Cursor Origin merge it cannot prove and retries only an unreadable read-back
+PASS: 
+ok - fm-pr-merge propagates a failed Cursor Origin merge command, including a head that moved after verification
+PASS: 
+ok - fm-pr-merge merges a green Cursor Origin pull request under away authority
+PASS: 
+ok - fm-pr-merge refuses before recording anything when origin or jq is absent
+PASS: 

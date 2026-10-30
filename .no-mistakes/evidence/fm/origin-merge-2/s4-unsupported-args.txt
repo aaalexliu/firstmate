@@ -1,0 +1,10 @@
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-no-pipeline -- --rebase
+armed: state/task-live.check.sh
+error: Cursor Origin has no rebase merge; name --squash or --merge
+exit=1
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-no-pipeline -- --auto
+error: extra merge arguments must not request auto-merge, a protection bypass, or branch deletion; pass --attended-override only for an explicit captain instruction
+exit=1
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-missing build
+error: --allow-missing does not apply to Cursor Origin, where a required check that has not reported blocks Origin's own mergeability verdict, which no flag here waives
+exit=2

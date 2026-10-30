@@ -1,0 +1,26 @@
+$ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+armed: state/task-live.check.sh
+exit=0
+$ grep '^pr_head=' state/task-live.meta
+pr_head=398dda4a1ab0b2091c2325cc3e5102a406149155
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 --allow-no-pipeline
+armed: state/task-live.check.sh
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 is open and mergeable at the recorded head 398dda4a1ab0b2091c2325cc3e5102a406149155, with no checks, waived by --allow-no-pipeline
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15 is merged as commit a94d56b54e0e28b3cb5ca1ea878ce206f79fb7c9 at 2026-10-30T12:56:33Z
+exit=0
+$ grep '^pr_head=' state/task-live.meta
+pr_head=398dda4a1ab0b2091c2325cc3e5102a406149155
+$ cat state/.wake-queue
+1793364994	1	check	merged-task-live-https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15	check: merge landed: task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/15
+$ cat state/task-live.merge-authority
+fm-merge-authority-v1
+origin
+cursor.com
+aaalexliu/fm-origin-sandbox
+15
+attended
+$ origin pr view 15 -R aaalexliu/fm-origin-sandbox --json status,mergeCommitSha,mergedAt,headSha
+{"status":"merged","mergeCommitSha":"a94d56b54e0e28b3cb5ca1ea878ce206f79fb7c9","mergedAt":"2026-10-30T12:56:33Z","headSha":"398dda4a1ab0b2091c2325cc3e5102a406149155"}
+$ git log --format="%H %P %s" -2 origin/main
+a94d56b54e0e28b3cb5ca1ea878ce206f79fb7c9 8b865f35cf0a96910cfa50af4d5a765390cfc40c Gate merge probe (#15)
+8b865f35cf0a96910cfa50af4d5a765390cfc40c ba1a256c2c60b3f2f68cd146b117614bc2cdddd5 merge: kept-head probe (#14)
