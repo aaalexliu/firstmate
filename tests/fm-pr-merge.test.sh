@@ -746,13 +746,15 @@ EOF
     groups="{\"name\":\"CI\",\"checkRuns\":[$runs]}"
   fi
   [ -z "$blockers" ] || blockers="{\"kind\":\"$blockers\"}"
-  printf '{"number":5,"url":"%s","status":"%s","isDraft":%s,"headSha":"%s","headRef":"fm/task-x1","baseRef":"main",' \
-    "$url" "$status" "$draft" "$head" > "$file"
-  printf '"mergeCommitSha":null,"mergedAt":null,"parentChangeId":%s,' "$parent" >> "$file"
-  printf '"mergeability":{"mergeable":%s,"hasMergeConflicts":%s,"mergeConflictState":%s,"evaluatedHeadSha":"%s",' \
-    "$mergeable" "$conflicts" "$conflict_state" "$evaluated_head" >> "$file"
-  printf '"mergeability":{"verdict":"%s","blockers":[%s]}},"ciState":{"checkRunGroups":[%s]}}\n' \
-    "$([ "$mergeable" = true ] && echo mergeable || echo blocked)" "$blockers" "$groups" >> "$file"
+  {
+    printf '{"number":5,"url":"%s","status":"%s","isDraft":%s,"headSha":"%s","headRef":"fm/task-x1","baseRef":"main",' \
+      "$url" "$status" "$draft" "$head"
+    printf '"mergeCommitSha":null,"mergedAt":null,"parentChangeId":%s,' "$parent"
+    printf '"mergeability":{"mergeable":%s,"hasMergeConflicts":%s,"mergeConflictState":%s,"evaluatedHeadSha":"%s",' \
+      "$mergeable" "$conflicts" "$conflict_state" "$evaluated_head"
+    printf '"mergeability":{"verdict":"%s","blockers":[%s]}},"ciState":{"checkRunGroups":[%s]}}\n' \
+      "$([ "$mergeable" = true ] && echo mergeable || echo blocked)" "$blockers" "$groups"
+  } > "$file"
 }
 
 # make_origin_case <name> [<pr-field>=<value> ...]: a case dir with the origin
