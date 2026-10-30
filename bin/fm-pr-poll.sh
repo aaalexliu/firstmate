@@ -6,10 +6,10 @@
 # a merge. The provider-tagged identity is data in the sidecar and is never
 # interpolated into this source: these bytes are identical for every task.
 # Each provider is read through its own standard CLI, gh for GitHub, glab for
-# GitLab, gerrit-axi for Gerrit, and tea for Forgejo, so an upstream checkout
-# needs no extra tooling to follow GitHub or GitLab. The Gerrit and Forgejo
-# branches additionally need jq, which bin/fm-pr-check.sh refuses to arm those
-# watches without.
+# GitLab, gerrit-axi for Gerrit, tea for Forgejo, and origin for Cursor Origin,
+# so an upstream checkout needs no extra tooling to follow GitHub or GitLab.
+# The Gerrit, Forgejo, and Origin branches additionally need jq, which
+# bin/fm-pr-check.sh refuses to arm those watches without.
 set -u
 LC_ALL=C
 export LC_ALL
@@ -238,6 +238,38 @@ case "$provider" in
         else error("invalid pull request record")
         end' 2>/dev/null) || exit 0
     [ "$merged" = true ] && printf '%s\n' merged
+    ;;
+  origin)
+    # Origin serves every pull request page on cursor.com, so the host is a
+    # constant rather than a recorded instance.
+    [ "$host" = cursor.com ] || exit 0
+    case "$path" in
+      */*/*|/*|*/) exit 0 ;;
+    esac
+    owner=${path%%/*}
+    repo=${path#*/}
+    [ "$owner" != "$path" ] || exit 0
+    for segment in "$owner" "$repo"; do
+      [ "${#segment}" -ge 1 ] && [ "${#segment}" -le 100 ] || exit 0
+      case "$segment" in
+        .|..|*[!A-Za-z0-9._-]*) exit 0 ;;
+      esac
+    done
+    [ "$url" = "https://cursor.com/codebase/$owner/$repo/pull/$number" ] || exit 0
+    command -v origin >/dev/null 2>&1 || exit 0
+    command -v jq >/dev/null 2>&1 || exit 0
+    # The one pull request is read by number with the repository named
+    # explicitly, because the watcher runs in no repository for the CLI to
+    # default to. The record's own url must be this pull request's, so a read
+    # that reached any other one stays silent, and only an exact merged status
+    # wakes this poll.
+    status=$(origin pr view "$number" -R "$owner/$repo" --json status,url \
+      </dev/null 2>/dev/null | jq -r --arg url "$url" '
+        if type == "object" and (.status | type) == "string" and .url == $url
+        then .status
+        else error("invalid pull request record")
+        end' 2>/dev/null) || exit 0
+    [ "$status" = merged ] && printf '%s\n' merged
     ;;
   *) exit 0 ;;
 esac

@@ -4,8 +4,9 @@
 # URLs before constructing task paths or performing any side effect.
 #
 # The stored identity is provider-tagged: provider, url, host, path, number.
-# "path" is the full project path, which is owner/repository on GitHub and
-# Forgejo, an arbitrarily nested group/subgroup/project namespace on GitLab, and
+# "path" is the full project path, which is owner/repository on GitHub,
+# Forgejo, and Cursor Origin (org/repository), an arbitrarily nested
+# group/subgroup/project namespace on GitLab, and
 # an arbitrarily nested project name on Gerrit, where "number" is the change
 # number. A GitLab or Gerrit project can sit at any depth, so no
 # owner/repository pair can address one and the sidecar carries the whole path
@@ -247,8 +248,8 @@ fm_pr_github_host_export() {  # <host>
 # username and repository rules are unchanged, and GitLab, Gerrit, and Forgejo
 # each get their own namespace rules rather than a loosened GitHub rule.
 #
-# FM_PR_OWNER and FM_PR_REPO are additionally set for github and forgejo
-# because bin/fm-pr-merge.sh addresses both by owner/repository. A gitlab or
+# FM_PR_OWNER and FM_PR_REPO are additionally set for github, forgejo, and
+# origin because each is addressed by owner/repository. A gitlab or
 # gerrit URL leaves them empty, and those paths address the project by FM_PR_HOST and
 # FM_PR_PATH instead, so a change on any instance resolves without a hardcoded
 # host.
@@ -312,6 +313,26 @@ fm_pr_url_parse() {
     FM_PR_URL=$raw
     FM_PR_HOST=$host
     FM_PR_PATH=$path
+    FM_PR_NUMBER=${BASH_REMATCH[3]}
+    return 0
+  fi
+  # Cursor Origin serves a pull request page on cursor.com, not on its
+  # origin.cursor.com git host, under a fixed "codebase" segment, so the host is
+  # a constant and the org/repository pair follows that segment. The GitHub
+  # pattern above cannot take this shape: it allows exactly two segments before
+  # "/pull/". The origin CLI addresses the repository as <org>/<repo>.
+  pattern='^https://cursor\.com/codebase/([A-Za-z0-9._-]{1,100})/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
+  if [[ "$raw" =~ $pattern ]]; then
+    case "${BASH_REMATCH[1]}" in .|..) return 1 ;; esac
+    case "${BASH_REMATCH[2]}" in .|..) return 1 ;; esac
+    FM_PR_PROVIDER=origin
+    FM_PR_URL=$raw
+    FM_PR_HOST=cursor.com
+    FM_PR_PATH="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    # shellcheck disable=SC2034
+    FM_PR_OWNER=${BASH_REMATCH[1]}
+    # shellcheck disable=SC2034
+    FM_PR_REPO=${BASH_REMATCH[2]}
     FM_PR_NUMBER=${BASH_REMATCH[3]}
     return 0
   fi
@@ -1229,6 +1250,113 @@ FIELDS
   # Consumed by bin/fm-teardown.sh pr_is_merged.
   # shellcheck disable=SC2034
   FM_PR_RECORD_HEAD=$head
+}
+
+# One Cursor Origin pull request, read by number through
+# `origin pr view <n> -R <org>/<repo> --json <fields>`; the credential stays in
+# the origin CLI. The record's own url must equal the canonical URL rebuilt
+# from <path> and <number>, so a read that reached any other pull request is an
+# honest unknown rather than a reading of this one. Origin spells the status
+# open, draft, merged, or closed. On success it sets:
+#   FM_PR_RECORD_STATE         status
+#   FM_PR_RECORD_MERGED        true when status is merged, else false
+#   FM_PR_RECORD_DRAFT         isDraft, true or false
+#   FM_PR_RECORD_HEAD          headSha, a full commit id
+#   FM_PR_RECORD_HEAD_REF      headRef
+#   FM_PR_RECORD_BASE_REF      baseRef
+#   FM_PR_RECORD_MERGE_COMMIT  mergeCommitSha, a full commit id
+#   FM_PR_RECORD_MERGED_AT     mergedAt
+#   FM_PR_RECORD_URL           url
+# Only status, isDraft, headSha, and url are required. headRef, baseRef,
+# mergeCommitSha, and mergedAt are optional: each is empty when Origin reports
+# it null, empty, or malformed, and never makes the read fail. Any other
+# reading - a missing CLI, a failed read, a required field of the wrong type,
+# a head that is not a full commit id, or another pull request's url - clears
+# them all and returns 1. docs/origin-cli-integration.md records the CLI
+# behavior this depends on. bin/fm-pr-poll.sh keeps its own narrower read
+# because the watcher body sources nothing.
+FM_PR_ORIGIN_FIELDS=status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url
+fm_pr_origin_read_record() {  # <host> <path> <number>
+  local host=$1 path=$2 number=$3 expected json fields line
+  local total=0 named=0 state='' draft='' head='' head_ref='' base_ref='' merge_commit='' merged_at='' url=''
+  FM_PR_RECORD_STATE=
+  FM_PR_RECORD_MERGED=
+  FM_PR_RECORD_DRAFT=
+  FM_PR_RECORD_HEAD=
+  FM_PR_RECORD_HEAD_REF=
+  FM_PR_RECORD_BASE_REF=
+  FM_PR_RECORD_MERGE_COMMIT=
+  FM_PR_RECORD_MERGED_AT=
+  FM_PR_RECORD_URL=
+  command -v origin >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  [ "$host" = cursor.com ] || return 1
+  expected="https://cursor.com/codebase/$path/pull/$number"
+  ( fm_pr_url_parse "$expected" && [ "$FM_PR_PROVIDER" = origin ] ) || return 1
+  if ! json=$(origin pr view "$number" -R "$path" --json "$FM_PR_ORIGIN_FIELDS" \
+      </dev/null 2>/dev/null) || [ -z "$json" ]; then
+    return 1
+  fi
+  if ! fields=$(printf '%s' "$json" | jq -r '
+      def text: type == "string" and length > 0;
+      def optional: if text and (contains("\n") | not) then . else "" end;
+      if type == "object" and (.status | text) and (.isDraft | type) == "boolean"
+        and (.headSha | text) and (.url | text)
+      then
+        "status=" + .status,
+        "draft=" + (.isDraft | tostring),
+        "head=" + .headSha,
+        "head_ref=" + (.headRef | optional),
+        "base_ref=" + (.baseRef | optional),
+        "merge_commit=" + (.mergeCommitSha | optional),
+        "merged_at=" + (.mergedAt | optional),
+        "url=" + .url
+      else
+        error("invalid pull request record")
+      end' 2>/dev/null); then
+    return 1
+  fi
+  while IFS= read -r line; do
+    total=$((total + 1))
+    case "$line" in
+      status=*) state=${line#status=} ;;
+      draft=*) draft=${line#draft=} ;;
+      head=*) head=${line#head=} ;;
+      head_ref=*) head_ref=${line#head_ref=} ;;
+      base_ref=*) base_ref=${line#base_ref=} ;;
+      merge_commit=*) merge_commit=${line#merge_commit=} ;;
+      merged_at=*) merged_at=${line#merged_at=} ;;
+      url=*) url=${line#url=} ;;
+      *) continue ;;
+    esac
+    named=$((named + 1))
+  done <<FIELDS
+$fields
+FIELDS
+  [ "$named" -eq 8 ] && [ "$total" -eq 8 ] || return 1
+  [ -n "$state" ] && [ "$url" = "$expected" ] || return 1
+  fm_pr_head_valid "$head" || return 1
+  fm_pr_head_valid "$merge_commit" || merge_commit=
+  case "$draft" in true|false) ;; *) return 1 ;; esac
+
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_STATE=$state
+  # shellcheck disable=SC2034
+  if [ "$state" = merged ]; then FM_PR_RECORD_MERGED=true; else FM_PR_RECORD_MERGED=false; fi
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_DRAFT=$draft
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_HEAD=$head
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_HEAD_REF=$head_ref
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_BASE_REF=$base_ref
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_MERGE_COMMIT=$merge_commit
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_MERGED_AT=$merged_at
+  # shellcheck disable=SC2034
+  FM_PR_RECORD_URL=$url
 }
 
 # gerrit-axi resolves its server from the current directory's origin remote

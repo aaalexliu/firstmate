@@ -3580,6 +3580,7 @@ pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://github.com/example/repo/pull/1
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://github.com/org/example/repo/pull/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://git.example.com/../repo/pulls/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://git.example.com:8443/acme/repo/pulls/12"}|reject
+pr-merged|["pr_url"]|pr-merged|{"pr_url":"https://cursor.com/codebase/acme/repo/pull/12"}|reject
 pr-merged|["pr_url"]|pr-merged|{"report_path":"data/work-a/report.md"}|reject
 local-main|["commit_sha"]|local-main|{"commit_sha":"0123ABC"}|reject
 local-main|["commit_sha"]|local-main|{"commit_sha":"012"}|reject

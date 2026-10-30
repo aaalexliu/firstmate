@@ -1653,12 +1653,20 @@ pr_number_from_target() {
   printf '%s' "$n"
 }
 
+# Cursor Origin serves refs/pull/<n>/merge but no refs/pull/<n>/head, and
+# accepts a fetch of the head commit by its id, so an Origin head is fetched
+# that way (docs/origin-cli-integration.md).
 ensure_commit_object() {
-  local target=$1 commit=$2 n
+  local target=$1 commit=$2 n ref
   git -C "$WT" cat-file -e "$commit^{commit}" 2>/dev/null && return 0
-  n=$(pr_number_from_target "$target") || return 1
   git -C "$WT" remote get-url origin >/dev/null 2>&1 || return 1
-  git -C "$WT" fetch --quiet origin "refs/pull/$n/head" >/dev/null 2>&1 || return 1
+  if ( fm_pr_url_parse "$target" && [ "$FM_PR_PROVIDER" = origin ] ); then
+    ref=$commit
+  else
+    n=$(pr_number_from_target "$target") || return 1
+    ref="refs/pull/$n/head"
+  fi
+  git -C "$WT" fetch --quiet origin "$ref" >/dev/null 2>&1 || return 1
   git -C "$WT" cat-file -e "$commit^{commit}" 2>/dev/null
 }
 
@@ -1699,7 +1707,8 @@ EOF
 # Is the worktree's PR merged for local work contained in that PR? Resolves the
 # PR from the recorded pr= URL first, then from the branch name, and asks the
 # forge for both the PR state and head: a recorded Forgejo URL is read through
-# tea (fm_pr_forgejo_read_record), and everything else through GitHub. Returns
+# tea (fm_pr_forgejo_read_record), a recorded Cursor Origin URL through origin
+# (fm_pr_origin_read_record), and everything else through GitHub. Returns
 # non-zero when the PR is not merged, the current work is not contained in the
 # PR head, no PR is found, or any forge read error occurs - the caller then
 # falls back to the content check.
@@ -1716,6 +1725,11 @@ pr_is_merged() {
     [ "$FM_PR_RECORD_MERGED" = true ] || return 1
     head=$FM_PR_RECORD_HEAD
     fm_pr_head_valid "$head" || return 1
+    resolved_url=$FM_PR_URL
+  elif fm_pr_url_parse "$target" && [ "$FM_PR_PROVIDER" = origin ]; then
+    fm_pr_origin_read_record "$FM_PR_HOST" "$FM_PR_PATH" "$FM_PR_NUMBER" || return 1
+    [ "$FM_PR_RECORD_MERGED" = true ] || return 1
+    head=$FM_PR_RECORD_HEAD
     resolved_url=$FM_PR_URL
   else
     view=$(cd "$WT" && gh pr view "$target" --json state,headRefOid,url -q '.state + "\t" + .headRefOid + "\t" + .url' 2>/dev/null) || return 1

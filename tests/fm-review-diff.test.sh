@@ -44,6 +44,12 @@
 #   (s) a branch merging both diverged default branches -> the unrelated merge
 #       bases are reported rather than picked silently
 #   (t) meta records base_branch= -> base stays origin/<base_branch>
+# Cursor Origin (a stub origin CLI on PATH):
+#   (u) pr= origin URL whose reported head this copy lacks and whose remote
+#       serves no refs/pull/<n>/head -> the head is fetched by id and wins
+#       over a stale recorded pr_head=
+#   (v) pr= origin URL whose record cannot be read -> offline fallback to a
+#       recorded pr_head=
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -380,6 +386,56 @@ test_forgejo_pr_url_falls_back_to_recorded_head() {
   pass "fm-review-diff falls back to a recorded Forgejo pr_head when the pull ref cannot be fetched"
 }
 
+test_origin_pr_url_reviews_the_reported_head() {
+  local case_dir out stale pipeline
+  case_dir=$(make_case origin-pull-head)
+  printf 'stale-local\n' > "$case_dir/wt/feature.txt"
+  git -C "$case_dir/wt" commit -qam "stale local branch"
+  stale=$(git -C "$case_dir/wt" rev-parse HEAD)
+  pipeline="$case_dir/_pipeline"
+  git clone -q "$case_dir/origin.git" "$pipeline"
+  printf 'pr-fixed\n' > "$pipeline/feature.txt"
+  git -C "$pipeline" -c user.email=t@t -c user.name=t commit -qam "pipeline fix on PR"
+  PR_SHA=$(git -C "$pipeline" rev-parse HEAD)
+  git -C "$pipeline" push -q origin "HEAD:refs/heads/fm/task-x1"
+  rm -rf "$pipeline"
+  ! git -C "$case_dir/wt" cat-file -e "$PR_SHA^{commit}" 2>/dev/null \
+    || fail "origin-pull-head: the copy already holds the reported head"
+  fm_fake_origin "$(fm_fakebin "$case_dir")"
+  write_task_meta "$case_dir" \
+    "pr=https://cursor.com/codebase/example/repo/pull/12" \
+    "pr_head=$stale"
+
+  out=$(PATH="$case_dir/fakebin:$PATH" FM_TEST_ORIGIN_HEAD=$PR_SHA FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+    run_review_diff "$case_dir" task-x1 2> "$case_dir/stderr")
+
+  assert_contains "$out" '+pr-fixed' "origin-pull-head: diff should show the head Origin reports"
+  assert_not_contains "$out" 'stale-local' "origin-pull-head: diff must not use the stale local branch or recorded head"
+  assert_not_contains "$(cat "$case_dir/stderr")" 'warning: PR head unavailable' \
+    "origin-pull-head: should not warn when the reported head is fetchable by id"
+  assert_grep 'pr view 12 -R example/repo --json ' "$case_dir/origin.log" \
+    "origin-pull-head: the head is read from the one pull request by number and repository"
+  pass "fm-review-diff reviews the head Origin reports, fetched by id, over a stale recorded pr_head"
+}
+
+test_origin_pr_url_falls_back_to_recorded_head() {
+  local case_dir out
+  case_dir=$(make_case origin-recorded-head)
+  stale_and_pr_commits "$case_dir"
+  fm_fake_origin "$(fm_fakebin "$case_dir")"
+  write_task_meta "$case_dir" \
+    "pr=https://cursor.com/codebase/example/repo/pull/9" \
+    "pr_head=$PR_SHA"
+
+  out=$(PATH="$case_dir/fakebin:$PATH" FM_TEST_ORIGIN_FAIL=1 run_review_diff "$case_dir" task-x1 2> "$case_dir/stderr")
+
+  assert_contains "$out" '+pr-fixed' "origin-recorded-head: recorded pr_head must be the offline fallback"
+  assert_not_contains "$out" 'stale-local' "origin-recorded-head: diff must not use the stale local branch"
+  assert_not_contains "$(cat "$case_dir/stderr")" 'warning: PR head unavailable' \
+    "origin-recorded-head: should not warn when recorded pr_head is reachable offline"
+  pass "fm-review-diff falls back to a recorded Origin pr_head when the pull request cannot be read"
+}
+
 # Without the opt-in a remote-backed project keeps the origin/<default> anchor
 # whatever the task's delivery, as before.
 test_default_review_stays_on_origin_without_the_opt_in() {
@@ -582,6 +638,8 @@ test_recorded_base_branch_is_the_review_base
 test_forgejo_pr_url_fetches_pull_head
 test_forgejo_repo_named_pulls_resolves_by_last_segment
 test_forgejo_pr_url_falls_back_to_recorded_head
+test_origin_pr_url_reviews_the_reported_head
+test_origin_pr_url_falls_back_to_recorded_head
 test_default_review_stays_on_origin_without_the_opt_in
 test_opted_in_local_landing_reviews_against_the_local_default
 test_opted_in_publishing_mode_stays_on_origin

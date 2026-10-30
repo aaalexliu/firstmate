@@ -536,6 +536,39 @@ EOF
 https://git.example.com/fixture/fixture-repo/pulls/1|git.example.com|fixture|fixture-repo|1
 https://code.internal/my-org/repo.name_with-parts/pulls/123456|code.internal|my-org|repo.name_with-parts|123456
 EOF
+  # A Cursor Origin pull request page lives on cursor.com under a fixed
+  # "codebase" segment, never on the origin.cursor.com git host.
+  while IFS='|' read -r url owner repo number; do
+    [ -n "$url" ] || continue
+    fm_pr_url_parse "$url" || fail "parser rejected a canonical Origin pull request URL: $url"
+    [ "$FM_PR_PROVIDER" = origin ] || fail "parser did not tag a cursor.com/codebase URL as origin"
+    [ "$FM_PR_URL" = "$url" ] || fail "parser changed a canonical Origin pull request URL"
+    [ "$FM_PR_HOST" = cursor.com ] || fail "parser returned wrong Origin host"
+    [ "$FM_PR_PATH" = "$owner/$repo" ] || fail "parser returned wrong Origin project path"
+    [ "$FM_PR_OWNER" = "$owner" ] || fail "parser returned wrong Origin org"
+    [ "$FM_PR_REPO" = "$repo" ] || fail "parser returned wrong Origin repository"
+    [ "$FM_PR_NUMBER" = "$number" ] || fail "parser returned wrong Origin pull request number"
+  done <<'EOF'
+https://cursor.com/codebase/aaalexliu/genesis/pull/1|aaalexliu|genesis|1
+https://cursor.com/codebase/my-org/repo.name_with-parts/pull/123456|my-org|repo.name_with-parts|123456
+https://cursor.com/codebase/.hidden/r/pull/2|.hidden|r|2
+EOF
+  for row in \
+    'https://cursor.com/codebase/./r/pull/1' \
+    'https://cursor.com/codebase/o/../pull/1' \
+    'https://cursor.com/codebase/o/r/pull/01' \
+    'https://cursor.com/codebase/o/r/pull/0' \
+    'https://cursor.com/codebase/o/r/pull/1/' \
+    'https://cursor.com/codebase/o/r/pulls/1' \
+    'https://cursor.com/codebase/g/o/r/pull/1' \
+    'https://origin.cursor.com/codebase/o/r/pull/1' \
+    'https://www.cursor.com/codebase/o/r/pull/1' \
+    'http://cursor.com/codebase/o/r/pull/1' \
+    'https://cursor.com/codebase/o/r/pull/1?x=1' \
+    "https://cursor.com/codebase/$(printf 'a%.0s' $(seq 1 101))/r/pull/1"
+  do
+    ! fm_pr_url_parse "$row" || fail "parser accepted a URL that must not resolve as origin: $row"
+  done
   # A Forgejo-shaped URL on github.com is refused (anti-spoofing, mirroring
   # fm_pr_forge_host_valid's refusal of github.com), and neither GitHub's
   # singular "pull" nor GitLab's "/-/merge_requests/" is accepted as forgejo.
@@ -2292,6 +2325,160 @@ SH
   pass "Forgejo login match parses tea's JSON in every line shape, in the helper and the static poll"
 }
 
+# A Cursor Origin pull request is followed by number through
+# `origin pr view <n> -R <org>/<repo> --json status,url`. Only an exact merged
+# status on a record whose url is this pull request's wakes the poll; every
+# other status, a record for another pull request, a failed read, and an absent
+# CLI stay silent. Arming refuses without the CLI, refuses a positive draft,
+# and records the forge-reported head; the merge wrapper refuses outright
+# because Origin pull requests are merged in Origin for now.
+test_origin_merge_watch() {
+  local dir state out rc url value head
+  dir=$(make_case origin-merge-watch)
+  state="$dir/home/state"
+  url=https://cursor.com/codebase/o/r/pull/7
+  head=89abcdef0123456789abcdef0123456789abcdef
+  ! PATH="$dir/fakebin:$BASE_PATH" command -v origin >/dev/null 2>&1 \
+    || fail "the case's search path already resolves an origin CLI"
+  ln -sf "$REAL_JQ" "$dir/fakebin/jq"
+
+  # Arming is where a missing CLI can still be reported, so it refuses there.
+  write_task_meta "$dir" task-none
+  set +e
+  out=$(run_check_entry "$dir" task-none "$url" 2>&1)
+  rc=$?
+  set -e
+  [ "$rc" -ne 0 ] || fail "arming an Origin watch succeeded with origin absent"
+  assert_contains "$out" "requires origin and jq on PATH" "arming with origin absent did not name the missing CLI"
+  [ ! -e "$state/task-none.check.sh" ] || fail "refused Origin arming left a poll armed"
+  ! grep -q '^pr=' "$state/task-none.meta" || fail "refused Origin arming recorded pr="
+
+  fm_fake_origin "$dir/fakebin"
+  : > "$dir/origin.log"
+
+  # A positive draft reading refuses before anything is recorded.
+  write_task_meta "$dir" task-draft
+  cp "$state/task-draft.meta" "$dir/draft-meta.before"
+  set +e
+  out=$(FM_TEST_ORIGIN_DRAFT=true FM_TEST_ORIGIN_STATUS=draft FM_TEST_ORIGIN_LOG="$dir/origin.log" \
+    run_check_entry "$dir" task-draft "$url" 2>&1)
+  rc=$?
+  set -e
+  [ "$rc" -ne 0 ] || fail "arming accepted a draft Origin pull request"
+  assert_contains "$out" "draft" "the Origin draft refusal did not name the draft state"
+  assert_contains "$out" "$url" "the Origin draft refusal did not name the pull request"
+  cmp -s "$dir/draft-meta.before" "$state/task-draft.meta" || fail "a refused Origin draft changed the task metadata"
+  [ ! -e "$state/task-draft.check.sh" ] || fail "a refused Origin draft armed a poll"
+
+  # A ready pull request is recorded with the head Origin reports and armed
+  # with the static poll and its sidecar.
+  write_task_meta "$dir" task-a
+  FM_TEST_ORIGIN_HEAD=$head FM_TEST_ORIGIN_LOG="$dir/origin.log" \
+    run_check_entry "$dir" task-a "$url" >/dev/null 2> "$dir/arm.err" \
+    || fail "arming refused a ready Origin pull request: $(cat "$dir/arm.err")"
+  grep -qxF "pr=$url" "$state/task-a.meta" || fail "the Origin pull request was not recorded"
+  grep -qxF "pr_head=$head" "$state/task-a.meta" || fail "the Origin-reported head was not recorded as pr_head"
+  [ "$(cat "$state/task-a.pr-poll")" = "origin
+$url
+cursor.com
+o/r
+7" ] || fail "published Origin sidecar bytes were not exact"
+  fm_pr_poll_artifacts_valid "$state" task-a "$POLL" \
+    || fail "published Origin poll provenance or metadata binding was invalid"
+  grep -qxF -- "pr view 7 -R o/r --json $FM_PR_ORIGIN_FIELDS" "$dir/origin.log" \
+    || fail "arming did not read the one pull request by number and repository"
+  [ ! -s "$dir/gh.log" ] || fail "arming an Origin pull request reached the GitHub CLI"
+
+  # Only an exact merged status on this pull request's record wakes the poll.
+  : > "$dir/origin.log"
+  for value in open draft closed MERGED ''; do
+    out=$(FM_TEST_ORIGIN_STATUS="$value" FM_TEST_ORIGIN_LOG="$dir/origin.log" run_poll "$dir")
+    [ -z "$out" ] || fail "Origin poll emitted for a '$value' status"
+  done
+  out=$(FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_URL=https://cursor.com/codebase/o/r/pull/8 \
+    FM_TEST_ORIGIN_LOG="$dir/origin.log" run_poll "$dir")
+  [ -z "$out" ] || fail "Origin poll emitted for another pull request's merged record"
+  out=$(FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_FAIL=1 FM_TEST_ORIGIN_LOG="$dir/origin.log" run_poll "$dir")
+  [ -z "$out" ] || fail "Origin poll emitted after a failed origin read"
+  out=$(FM_TEST_ORIGIN_RAW='Error: Origin pull request #7 not found' FM_TEST_ORIGIN_LOG="$dir/origin.log" run_poll "$dir")
+  [ -z "$out" ] || fail "Origin poll emitted for an error body"
+  out=$(FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_LOG="$dir/origin.log" run_poll "$dir")
+  [ "$out" = merged ] || fail "Origin poll did not emit exactly one merged line"
+  grep -qxF -- "pr view 7 -R o/r --json status,url" "$dir/origin.log" \
+    || fail "the poll did not read the one pull request by number and repository"
+
+  # A doctored sidecar cannot redirect the poll.
+  for value in "origin|$url|evil.example|o/r|7" "origin|$url|cursor.com|o/other|7" \
+    "origin|$url|cursor.com|o/r|8" "origin|$url|cursor.com|o/r/x|7"; do
+    printf '%s\n' "$value" | tr '|' '\n' > "$state/task-a.pr-poll"
+    out=$(FM_TEST_ORIGIN_STATUS=merged run_poll "$dir")
+    [ -z "$out" ] || fail "Origin poll emitted for a doctored sidecar: $value"
+  done
+
+  # The merge wrapper refuses before reading or recording anything.
+  write_task_meta "$dir" task-m
+  cp "$state/task-m.meta" "$dir/merge-meta.before"
+  : > "$dir/origin.log"
+  set +e
+  FM_TEST_ORIGIN_LOG="$dir/origin.log" run_merge_entry "$dir" task-m "$url" >/dev/null 2> "$dir/merge.err"
+  rc=$?
+  set -e
+  [ "$rc" -eq 2 ] || fail "the merge wrapper did not refuse an Origin pull request (rc=$rc)"
+  grep -qF 'Origin PRs are merged in Origin for now' "$dir/merge.err" \
+    || fail "the Origin merge refusal did not say Origin PRs are merged in Origin: $(cat "$dir/merge.err")"
+  [ ! -s "$dir/origin.log" ] || fail "the Origin merge refusal still read the forge"
+  cmp -s "$dir/merge-meta.before" "$state/task-m.meta" || fail "the Origin merge refusal changed the task metadata"
+  pass "Origin pull requests are armed by number, wake only on this pull request's merged status, and are never merged here"
+}
+
+# The Origin record reader requires only status, isDraft, headSha, and url. A
+# null, empty, or malformed headRef, baseRef, mergeCommitSha, or mergedAt reads
+# as empty instead of turning the whole read into an unknown, and a well-formed
+# value is still exported.
+test_origin_read_record_optional_fields() {
+  local dir url head merge
+  dir=$(make_case origin-read-optional)
+  url=https://cursor.com/codebase/o/r/pull/7
+  head=89abcdef0123456789abcdef0123456789abcdef
+  merge=0360f8e3b79d528c13f07ddcc61024275ec22a44
+  ln -sf "$REAL_JQ" "$dir/fakebin/jq"
+  fm_fake_origin "$dir/fakebin"
+
+  PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":\"$head\",\"headRef\":null,\"baseRef\":\"\",\"mergeCommitSha\":null,\"mergedAt\":null,\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record with null optional fields was an unknown"
+  [ "$FM_PR_RECORD_STATE" = merged ] && [ "$FM_PR_RECORD_MERGED" = true ] \
+    && [ "$FM_PR_RECORD_DRAFT" = false ] && [ "$FM_PR_RECORD_HEAD" = "$head" ] \
+    && [ "$FM_PR_RECORD_URL" = "$url" ] \
+    || fail "a record with null optional fields lost its required fields"
+  [ -z "$FM_PR_RECORD_HEAD_REF" ] && [ -z "$FM_PR_RECORD_BASE_REF" ] \
+    && [ -z "$FM_PR_RECORD_MERGE_COMMIT" ] && [ -z "$FM_PR_RECORD_MERGED_AT" ] \
+    || fail "null or empty optional fields were not exported as empty"
+
+  PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":\"$head\",\"headRef\":7,\"baseRef\":\"main\",\"mergeCommitSha\":\"abc\",\"mergedAt\":\"2026-10-29T22:33:41Z\",\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record with malformed optional fields was an unknown"
+  [ -z "$FM_PR_RECORD_HEAD_REF" ] && [ -z "$FM_PR_RECORD_MERGE_COMMIT" ] \
+    || fail "malformed optional fields were not exported as empty"
+  [ "$FM_PR_RECORD_BASE_REF" = main ] && [ "$FM_PR_RECORD_MERGED_AT" = 2026-10-29T22:33:41Z ] \
+    || fail "well-formed optional fields beside malformed ones were not exported"
+
+  PATH="$dir/fakebin:$BASE_PATH" FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_MERGE_COMMIT=$merge \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a full Origin record was an unknown"
+  [ "$FM_PR_RECORD_HEAD_REF" = fm/task ] && [ "$FM_PR_RECORD_BASE_REF" = main ] \
+    && [ "$FM_PR_RECORD_MERGE_COMMIT" = "$merge" ] && [ "$FM_PR_RECORD_MERGED_AT" = 2026-10-29T22:10:00Z ] \
+    || fail "well-formed optional fields were not exported"
+
+  ! PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":null,\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record without a head was read"
+  [ -z "$FM_PR_RECORD_STATE" ] || fail "a failed Origin read left a status behind"
+}
+
 test_gitlab_merge_watch() {
   local dir state out rc url value noglab entry bindir name
   dir=$(make_case gitlab-merge-watch)
@@ -3766,6 +3953,8 @@ test_github_enterprise_hosts
 test_gitlab_merge_watch
 test_forgejo_merge_watch
 test_forgejo_login_list_shapes
+test_origin_merge_watch
+test_origin_read_record_optional_fields
 test_gerrit_merge_watch
 test_gerrit_arming_records_no_patch_set_revision
 test_gerrit_ready_gate_reads_the_published_tree

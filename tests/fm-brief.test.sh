@@ -288,14 +288,92 @@ test_forge_selection_renders_correct_cli() {
     assert_contains "$out" "$expect" "$label was refused without its reason"
     [ ! -e "$home/data/brief-forge-bad/brief.md" ] || fail "$label left a brief behind"
   done <<'ROWS'
-a value outside the closed set|--mode direct-PR --forge gitlab|expected none, gerrit, forgejo, or external
-the removed github value|--mode direct-PR --forge github|expected none, gerrit, forgejo, or external
+a value outside the closed set|--mode direct-PR --forge gitlab|expected none, gerrit, forgejo, origin, or external
+the removed github value|--mode direct-PR --forge github|expected none, gerrit, forgejo, origin, or external
 forgejo on local-only|--mode local-only --forge forgejo|cannot ship mode=local-only
 a shape on forgejo|--mode direct-PR --forge forgejo --shape squash|--shape applies only with --forge gerrit
 forgejo on a scout|--scout --forge forgejo|apply only to ship briefs
 ROWS
 
   pass "fm-brief.sh: --forge forgejo names tea in Rule 3, the direct-PR DOD, and the draft read-back, marks the delivery contract, and the closed set refuses everything else"
+}
+
+# --forge origin is the Cursor Origin value of the registered forge binding.
+# Both publishing modes name the origin CLI instead of gh-axi, open the PR with
+# `origin pr create`, read its URL back with `origin pr view --json url`, and
+# leave the merge to a person in Origin. A no-mistakes ship skips the pipeline's
+# pr and ci steps and waits on `origin pr checks` itself.
+test_forge_origin_renders_the_origin_cli() {
+  local home brief out rc
+  home="$TMP_ROOT/forge-origin-home"
+  mkdir -p "$home/data"
+
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-origin-direct some-proj --mode direct-PR --forge origin >/dev/null 2>&1 \
+    || fail "--forge origin should scaffold a direct-PR ship brief"
+  brief="$home/data/brief-origin-direct/brief.md"
+  assert_grep "3. Use the origin CLI for Cursor Origin operations and chrome-devtools-axi for browser operations." "$brief" \
+    "--forge origin must render the origin Rule 3 line"
+  grep -qx "Delivery contract: mode=direct-PR forge=origin" "$brief" \
+    || fail "--forge origin must mark the delivery contract line for the spawn's registry check"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'git push -u origin fm/brief-origin-direct' "$brief" \
+    "a direct-PR --forge origin DOD must push the branch before opening the PR"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep '`origin pr create --head fm/brief-origin-direct' "$brief" \
+    "a direct-PR --forge origin DOD must open the PR with origin pr create"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep '`origin pr view fm/brief-origin-direct --json number,url`' "$brief" \
+    "a direct-PR --forge origin DOD must read the PR URL back from origin"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'mark it ready with `origin pr ready <number>`' "$brief" \
+    "a direct-PR --forge origin DOD must clear a draft with origin"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'append `done [at=<epoch>]: PR {url}` to the status file' "$brief" \
+    "a direct-PR --forge origin DOD must report the PR URL"
+  assert_grep 'A person merges the PR in Origin' "$brief" \
+    "a direct-PR --forge origin DOD must leave the merge to a person in Origin"
+  assert_no_grep 'gh-axi pr' "$brief" \
+    "a direct-PR --forge origin DOD must not send the worker to gh-axi"
+
+  FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-origin-nm some-proj --mode no-mistakes --forge origin >/dev/null 2>&1 \
+    || fail "--forge origin should scaffold a no-mistakes ship brief"
+  brief="$home/data/brief-origin-nm/brief.md"
+  grep -qx "Delivery contract: mode=no-mistakes forge=origin" "$brief" \
+    || fail "a no-mistakes --forge origin brief must mark the delivery contract line"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'Pass `--skip pr,ci` on every `no-mistakes axi run` for this task' "$brief" \
+    "a no-mistakes --forge origin DOD must skip the pipeline's pr and ci steps"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep '`origin pr create --head fm/brief-origin-nm' "$brief" \
+    "a no-mistakes --forge origin DOD must open the PR with origin pr create"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'Read the PR'"'"'s checks with `origin pr checks <number>`' "$brief" \
+    "a no-mistakes --forge origin DOD must read origin pr checks"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'never pass `--watch` for a PR that reports no checks' "$brief" \
+    "a no-mistakes --forge origin DOD must keep --watch off a PR with no checks, where it never returns"
+  # shellcheck disable=SC2016 # Backticks are literal generated brief text.
+  assert_grep 'append `done [at=<epoch>]: PR {url} checks green`' "$brief" \
+    "a no-mistakes --forge origin DOD must report the CI-ready PR"
+  assert_no_grep 'gh-axi pr' "$brief" \
+    "a no-mistakes --forge origin DOD must not send the worker to gh-axi"
+  assert_no_grep 'pr=manual' "$brief" \
+    "a no-mistakes --forge origin brief must not claim the pr=manual binding"
+
+  while IFS='|' read -r label args expect; do
+    [ -n "$label" ] || continue
+    # shellcheck disable=SC2086 # The row's arguments must split into words.
+    out=$(FM_HOME="$home" "$ROOT/bin/fm-brief.sh" brief-origin-bad some-proj $args 2>&1); rc=$?
+    expect_code 1 "$rc" "$label must be refused"
+    assert_contains "$out" "$expect" "$label was refused without its reason"
+    [ ! -e "$home/data/brief-origin-bad/brief.md" ] || fail "$label left a brief behind"
+  done <<'ROWS'
+origin on local-only|--mode local-only --forge origin|cannot ship mode=local-only
+pr=manual beside origin|--mode no-mistakes --forge origin --pr manual|not forge=origin
+a base branch on origin|--mode direct-PR --forge origin --base-branch release|not supported on forge=origin
+ROWS
+
+  pass "fm-brief.sh: --forge origin names the origin CLI to open, read back, and clear a draft PR in both publishing modes, skips pr and ci under no-mistakes, and refuses local-only"
 }
 
 # --forge external renders the external review rail from bin/fm-dod-lib.sh: a
@@ -1695,6 +1773,7 @@ test_no_heredoc_in_command_substitution
 test_help_includes_entire_header
 test_ship_modes_generate_clean_briefs
 test_forge_selection_renders_correct_cli
+test_forge_origin_renders_the_origin_cli
 test_forge_external_renders_the_review_rail
 test_ship_mode_is_required_and_closed_set
 test_ship_mode_is_explicit_not_registry

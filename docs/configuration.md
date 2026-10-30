@@ -2085,12 +2085,15 @@ It uses the same live secondmate discovery and propagation helper as bootstrap; 
 
 A project with no `forge=` token is served by the GitHub tooling, `gh` and `gh-axi`, exactly as before the token existed, and the token changes nothing for existing entries.
 A remote-backed project on a Forgejo or Gitea server is registered with `forge=forgejo`, one value of the same closed `forge=` binding that Gerrit uses; `bin/fm-project-mode.sh`'s header owns its grammar, values, and refusals, and `bin/fm-project-mode.sh --forge <name>` reads it back.
-Firstmate passes the binding to `bin/fm-brief.sh --forge` at intake the same way it passes `--mode`, and `bin/fm-spawn.sh` refuses a brief whose forge disagrees with the registry; on `forgejo` the generated ship brief names `tea` instead of `gh-axi`.
-The URL-driven provider dispatch in [`bin/fm-pr-lib.sh`](../bin/fm-pr-lib.sh) recognizes a GitHub, GitLab, Gerrit, or Forgejo PR/MR/change URL once one exists, regardless of this token.
+A remote-backed project on Cursor Origin (`origin.cursor.com`) is registered with `forge=origin`.
+Firstmate passes the binding to `bin/fm-brief.sh --forge` at intake the same way it passes `--mode`, and `bin/fm-spawn.sh` refuses a brief whose forge disagrees with the registry; on `forgejo` the generated ship brief names `tea` instead of `gh-axi`, and on `origin` it names the `origin` CLI.
+The URL-driven provider dispatch in [`bin/fm-pr-lib.sh`](../bin/fm-pr-lib.sh) recognizes a GitHub, GitLab, Gerrit, Forgejo, or Origin PR/MR/change URL once one exists, regardless of this token.
 
 A Forgejo (or Gitea) project needs `tea` on `PATH` plus a `tea login` registered for that project's host (`tea login add`); the login is matched to a PR's host automatically, never configured per project.
 A GitLab project needs no forge token, only `glab` on `PATH`, authenticated via `glab auth login`.
-[`docs/gitlab-merge-watch.md`](gitlab-merge-watch.md) and [`docs/forgejo-tea-integration.md`](forgejo-tea-integration.md) hold the empirically verified CLI behavior each provider's watch and merge path depends on.
+An Origin project needs `origin` and `jq` on `PATH`, `origin auth login`, and a Git credential helper for `origin.cursor.com` in its clone, either from `origin auth setup-git` or a per-clone `credential.https://origin.cursor.com.helper` entry.
+Origin support is watch-only for now: the worker opens the pull request with `origin pr create`, a person merges it in Origin, firstmate's merge watch reports the merge, and cleanup proves the work landed from the merged record; `bin/fm-pr-merge.sh` refuses an Origin pull request.
+[`docs/gitlab-merge-watch.md`](gitlab-merge-watch.md), [`docs/forgejo-tea-integration.md`](forgejo-tea-integration.md), and [`docs/origin-cli-integration.md`](origin-cli-integration.md) hold the empirically verified CLI behavior each provider's watch and merge path depends on.
 
 A project whose reviews are created by a review tool that uploads its own snapshot of the worker's commits is registered `[direct-PR forge=external]`; it is never detected, ships `direct-PR` only, carries no yolo, and needs the [external review tool](#external-review-tool-configexternal-reviewmd-configexternal-review-url-configexternal-review-backup) configuration below.
 [`docs/external-review-forge.md`](external-review-forge.md) is the design.

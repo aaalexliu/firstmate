@@ -59,16 +59,23 @@
 # task's done. Teardown's landed-work test remains the complete discard gate.
 # The block opens with the fixed machine-readable "Delivery contract: mode=<mode>"
 # line that bin/fm-spawn.sh checks a ship brief against; a forge=gerrit block
-# appends " forge=gerrit shape=squash" to that line, and a forge=forgejo or
-# forge=external block appends " forge=forgejo" or " forge=external". The "Ship branch: <branch>"
+# appends " forge=gerrit shape=squash" to that line, and a forge=forgejo,
+# forge=origin, or forge=external block appends " forge=forgejo", " forge=origin",
+# or " forge=external". The "Ship branch: <branch>"
 # line under it is machine-readable the same way: bin/fm-spawn.sh refuses a ship
 # whose spawn-selected branch disagrees with it.
-# forge is none|gerrit|forgejo|external and defaults to none;
+# forge is none|gerrit|forgejo|origin|external and defaults to none;
 # bin/fm-project-mode.sh's header owns what the registry binding means, and this
 # file owns what each forge changes for a WORKER (docs/gerrit-forge-integration.md
 # is the gerrit design and docs/external-review-forge.md the external one). In
 # the Definition of done, forgejo changes only the CLI a direct-PR worker opens
-# its pull request with: tea instead of gh-axi. A forge composes with
+# its pull request with: tea instead of gh-axi. On origin the worker opens its
+# Cursor Origin pull request with the origin CLI, pushing its branch first, and
+# reports the URL `origin pr view` prints rather than one it builds; the
+# pipeline's pr and ci steps do not drive Origin, so a no-mistakes run skips
+# them and the worker then opens the PR and waits on its checks, the way
+# pr=manual does (docs/origin-cli-integration.md holds the CLI evidence). A
+# person merges an Origin pull request in Origin. A forge composes with
 # the two modes that publish and is refused on local-only, which publishes
 # nothing. On gerrit the worker publishes one squashed change with
 # `gerrit-axi publish --squash` instead of opening a pull request: direct-PR does
@@ -185,9 +192,9 @@ fm_mode_publishes() {  # <mode>
 fm_forge_valid_for_mode() {  # <forge> <mode> <caller>
   local forge=$1 mode=$2 caller=$3
   case "$forge" in
-    none|gerrit|forgejo|external) ;;
+    none|gerrit|forgejo|origin|external) ;;
     *)
-      echo "error: $caller: unknown forge '$forge' (expected none, gerrit, forgejo, or external)" >&2
+      echo "error: $caller: unknown forge '$forge' (expected none, gerrit, forgejo, origin, or external)" >&2
       return 1 ;;
   esac
   if [ "$forge" != none ] && [ "$mode" = local-only ]; then
@@ -204,8 +211,9 @@ fm_forge_valid_for_mode() {  # <forge> <mode> <caller>
 # Closed-set gate for the PR-text posture, shared like fm_forge_valid_for_mode.
 # Only a no-mistakes ship takes manual: direct-PR already leaves the text to the
 # worker and local-only opens no PR. A bound forge is refused too: gerrit has no
-# pull request to describe, external uploads through a review tool, and the
-# forgejo worker's tea commands are not written into this block yet.
+# pull request to describe, external uploads through a review tool, the
+# forgejo worker's tea commands are not written into this block yet, and an
+# origin worker already writes its own PR text in every mode.
 fm_pr_text_valid() {  # <pr> <mode> <forge> <caller>
   local pr=$1 mode=$2 forge=$3 caller=$4
   case "$pr" in
@@ -535,6 +543,22 @@ If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the 
 EOF
 }
 
+# How a worker on a forge=origin project opens or updates its Cursor Origin pull
+# request, shared by both publishing modes. <push-step> is the mode's sentence
+# about how the branch reaches Origin. The URL is read back from the CLI because
+# Origin serves pull request pages on cursor.com, not on its git host.
+fm_dod_origin_pr_steps() {  # <branch> <push-step>
+  local branch=$1 push_step=$2 branch_q
+  printf -v branch_q '%q' "$branch"
+  cat <<EOF
+1. Write the PR body to a file of your own under the scratch location rule 2 names, and verify it with \`head\` before using it. Write the title and body in plain English for a reviewer who lacks your context, with no direct address.
+2. $push_step
+3. Find the PR for your branch first: \`origin pr view $branch_q --json number,url\` prints it when one is open. If one exists, update its title and body with \`origin pr edit <number> --title '<title>' --body-file <path>\`. Otherwise open it from this copy with \`origin pr create --head $branch_q --title '<title>' --body-file <path>\`, ready for review, not a draft; it takes the repository from this copy's \`origin\` remote and targets its default branch.
+4. Take the PR's number and URL from \`origin pr view $branch_q --json number,url\`, never by building the URL yourself: Origin serves the PR page at a \`https://cursor.com/codebase/...\` address, not on the \`origin.cursor.com\` git host.
+5. Never comment on, review, merge, or close this PR or any other; a person merges it in Origin.
+EOF
+}
+
 fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<base>] [<consent>] [<pr>]
   local mode=$1 id=$2 forge=${4:-none} base=${5:-} consent=${6:-} pr=${7:-auto}
   local branch=${3:-fm/$id} pr_base='' nm_base='' base_q contract_forge='' contract_consent='' forge_cli=gh-axi draft_check adapter
@@ -553,6 +577,10 @@ fm_dod_block() {  # <mode> <task-id> [branch] [<forge>] [<base>] [<consent>] [<p
     contract_forge=' forge=forgejo'
     forge_cli=tea
     draft_check="(\`tea api --repo <owner>/<repo> /repos/{owner}/{repo}/pulls/<number>\` must show \`draft\` as false, where <owner>/<repo> and <number> come from your PR URL); Forgejo marks a draft by a work-in-progress title prefix such as \`WIP:\`, so if it is a draft, remove that prefix with \`tea pulls edit <number> --repo <owner>/<repo> --title '<title without the prefix>'\`."
+  fi
+  if [ "$forge" = origin ]; then
+    contract_forge=' forge=origin'
+    draft_check="(\`origin pr view <number> --json isDraft\` must print \`\"isDraft\":false\`, where <number> is the PR number \`origin pr view\` printed); if it is a draft, mark it ready with \`origin pr ready <number>\`."
   fi
   if [ -n "$base" ]; then
     printf -v base_q '%q' "$base"
@@ -637,6 +665,54 @@ Do NOT run /no-mistakes. A human approves and merges the review; firstmate relay
 ## Review tool instructions (home configuration)
 EOF
       printf '%s\n' "$adapter"
+      ;;
+    direct-PR:origin)
+      cat <<EOF
+# Definition of done
+Delivery contract: mode=direct-PR forge=origin$contract_consent
+Ship branch: $branch
+This task ships **direct-PR** to Cursor Origin: you raise the PR yourself with the \`origin\` CLI, without the no-mistakes pipeline.
+The task is complete only when committed on your branch.
+When it is implemented and committed, open the PR:
+EOF
+      fm_dod_origin_pr_steps "$branch" "Push your branch with \`git push -u origin $branch\`, or let \`origin pr create --push\` push it; either records the push in this copy. Push again after any later commit, which updates the open PR."
+      cat <<EOF
+Before you report done, read the PR back from the forge and confirm it is not a draft $draft_check
+A draft cannot be merged, so a done report on one leaves the merge unasked.
+Then append \`done [at=<epoch>]: PR {url}\` to the status file and stop, with {url} exactly as \`origin pr view\` printed it.
+That \`done:\` is accepted only when this copy's HEAD - your latest commit - is pushed to your PR branch; the check tests that commit, not merely that a branch moved.
+If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
+Do NOT run /no-mistakes. A person merges the PR in Origin; firstmate watches for the merge and relays the outcome.
+EOF
+      ;;
+    no-mistakes:origin)
+      cat <<EOF
+# Definition of done
+Delivery contract: mode=no-mistakes forge=origin$contract_consent
+Ship branch: $branch
+This project's forge is Cursor Origin, whose pull requests and checks the pipeline's \`pr\` and \`ci\` steps do not drive, so **no-mistakes runs here as a validation pass that pushes the branch**, and you then open the PR yourself with the \`origin\` CLI.
+Pass \`--skip pr,ci\` on every \`no-mistakes axi run\` for this task, and skip nothing else: \`review\`, \`test\`, \`document\`, \`lint\`, and \`push\` still run.
+The task is complete only when committed on your branch.
+When you believe it is complete, append \`done [at=<epoch>]: {summary}\` to the status file and stop.
+Firstmate will then instruct you to run /no-mistakes to validate and push.
+That first \`done:\` is the handoff that starts the pipeline, which owns the push; it is not a request to push from this copy.
+
+EOF
+      fm_nm_driving_block no-ci
+      cat <<EOF
+
+When the run's outcome is passed, passed-with-skips, or passed-with-override, open the PR from the branch the run pushed:
+EOF
+      fm_dod_origin_pr_steps "$branch" "Do not push the branch yourself: the run's \`push\` step pushed it, and each later run's push updates the open PR."
+      cat <<EOF
+6. Read the PR's checks with \`origin pr checks <number>\`. It exits 0 when every reported check passed, and exits 1 printing \`No checks reported.\` when the project reports none: that is not a failed check and needs no fix. While a reported check is still running, wait with \`origin pr checks <number> --watch\`, under the ten-minute command limit as the driving block bounds its waits, then read the checks again; never pass \`--watch\` for a PR that reports no checks, because it then waits indefinitely. If a check fails, commit the fix, drive a new run with the same \`--skip pr,ci\`, and update the PR text if the change affects it.
+Then read the PR back from the forge and confirm it is not a draft $draft_check
+A draft cannot be merged, so a done report on one leaves the merge unasked.
+Then append \`done [at=<epoch>]: PR {url} checks green\` and stop, with {url} exactly as \`origin pr view\` printed it. You are finished.
+That CI-ready \`done:\` is accepted only when this copy's HEAD - your latest commit - is one the /no-mistakes run pushed, so commit nothing after the last run; the check tests that commit, not merely that a branch moved.
+If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
+A person merges the PR in Origin; firstmate watches for the merge and relays the outcome.
+EOF
       ;;
     direct-PR:*)
       cat <<EOF
