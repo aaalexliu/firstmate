@@ -295,24 +295,49 @@ ba1a256c2c60b3f2f68cd146b117614bc2cdddd5 6d085c48a9bc0f4a0293bee7dbc5e0b60d7f7ef
 
 ### A push after registration refuses
 
-A second commit pushed after registration moves the live head away from the recorded one, so the merge refuses.
-This run predates the merge keeping the recorded head: its last line shows the head it re-recorded, where the merge now leaves `713882b7175272aa8a22b34ca993cf8279750a61`, so a retry still refuses until the moved head is reviewed and a fresh `fm-pr-check.sh` registration from a done report records it:
+A second commit pushed after registration moves the live head.
+The merge refuses and keeps the recorded head.
+A retry refuses the same way.
+Only a fresh `fm-pr-check.sh` registration, as a new done report makes, records the moved head, and the merge then lands:
 
 ```
-$ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/13
+$ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14
 armed: state/task-live.check.sh
-pr_head=713882b7175272aa8a22b34ca993cf8279750a61
-
-$ git push origin merge-guarded-3
-$ origin pr view 13 -R aaalexliu/fm-origin-sandbox --json headSha
-{"headSha":"0013b4e4348e7330e0da53df333c6b53d19efada"}
-
-$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/13 --allow-no-pipeline
+$ grep '^pr_head=' state/task-live.meta
+pr_head=9bea1f9da256b573fc53f377dbb08f296cfa79fd
+$ git push origin merge-guarded-4
+$ origin pr view 14 -R aaalexliu/fm-origin-sandbox --json headSha
+{"headSha":"2cbd997b35b4e906a9f9596eb973b0f0339241a5"}
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14 --allow-no-pipeline
 armed: state/task-live.check.sh
-error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/13
-  - the live head 0013b4e4348e7330e0da53df333c6b53d19efada is not the recorded head 713882b7175272aa8a22b34ca993cf8279750a61
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14
+  - the live head 2cbd997b35b4e906a9f9596eb973b0f0339241a5 is not the recorded head 9bea1f9da256b573fc53f377dbb08f296cfa79fd; the moved head must be reviewed and re-reported done, which registers it, before it can merge
 exit=1
-pr_head=0013b4e4348e7330e0da53df333c6b53d19efada
+$ grep '^pr_head=' state/task-live.meta
+pr_head=9bea1f9da256b573fc53f377dbb08f296cfa79fd
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14 --allow-no-pipeline
+armed: state/task-live.check.sh
+error: refusing to merge https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14
+  - the live head 2cbd997b35b4e906a9f9596eb973b0f0339241a5 is not the recorded head 9bea1f9da256b573fc53f377dbb08f296cfa79fd; the moved head must be reviewed and re-reported done, which registers it, before it can merge
+exit=1
+$ grep '^pr_head=' state/task-live.meta
+pr_head=9bea1f9da256b573fc53f377dbb08f296cfa79fd
+$ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14
+armed: state/task-live.check.sh
+$ grep '^pr_head=' state/task-live.meta
+pr_head=2cbd997b35b4e906a9f9596eb973b0f0339241a5
+$ fm-pr-merge.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14 --allow-no-pipeline
+armed: state/task-live.check.sh
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14 is open and mergeable at the recorded head 2cbd997b35b4e906a9f9596eb973b0f0339241a5, with no checks, waived by --allow-no-pipeline
+verified: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/14 is merged as commit 8b865f35cf0a96910cfa50af4d5a765390cfc40c at 2026-10-30T12:48:16Z
+exit=0
+$ grep '^pr_head=' state/task-live.meta
+pr_head=2cbd997b35b4e906a9f9596eb973b0f0339241a5
+$ origin pr view 14 -R aaalexliu/fm-origin-sandbox --json status,mergeCommitSha,mergedAt,headSha
+{"status":"merged","mergeCommitSha":"8b865f35cf0a96910cfa50af4d5a765390cfc40c","mergedAt":"2026-10-30T12:48:16Z","headSha":"2cbd997b35b4e906a9f9596eb973b0f0339241a5"}
+$ git log --format="%H %P %s" -2 origin/main
+8b865f35cf0a96910cfa50af4d5a765390cfc40c ba1a256c2c60b3f2f68cd146b117614bc2cdddd5 merge: kept-head probe (#14)
+ba1a256c2c60b3f2f68cd146b117614bc2cdddd5 6d085c48a9bc0f4a0293bee7dbc5e0b60d7f7ef5 merge: guarded merge probe 2 (#12)
 ```
 
 Origin enforces the same pin on its own when a head moves between the read and the merge:
