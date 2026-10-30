@@ -1264,10 +1264,13 @@ FIELDS
 #   FM_PR_RECORD_HEAD          headSha, a full commit id
 #   FM_PR_RECORD_HEAD_REF      headRef
 #   FM_PR_RECORD_BASE_REF      baseRef
-#   FM_PR_RECORD_MERGE_COMMIT  mergeCommitSha, empty while Origin reports null
-#   FM_PR_RECORD_MERGED_AT     mergedAt, empty while Origin reports null
+#   FM_PR_RECORD_MERGE_COMMIT  mergeCommitSha, a full commit id
+#   FM_PR_RECORD_MERGED_AT     mergedAt
 #   FM_PR_RECORD_URL           url
-# Any other reading - a missing CLI, a failed read, a field of the wrong type,
+# Only status, isDraft, headSha, and url are required. headRef, baseRef,
+# mergeCommitSha, and mergedAt are optional: each is empty when Origin reports
+# it null, empty, or malformed, and never makes the read fail. Any other
+# reading - a missing CLI, a failed read, a required field of the wrong type,
 # a head that is not a full commit id, or another pull request's url - clears
 # them all and returns 1. docs/origin-cli-integration.md records the CLI
 # behavior this depends on. bin/fm-pr-poll.sh keeps its own narrower read
@@ -1296,19 +1299,17 @@ fm_pr_origin_read_record() {  # <host> <path> <number>
   fi
   if ! fields=$(printf '%s' "$json" | jq -r '
       def text: type == "string" and length > 0;
+      def optional: if text and (contains("\n") | not) then . else "" end;
       if type == "object" and (.status | text) and (.isDraft | type) == "boolean"
-        and (.headSha | text) and (.headRef | text) and (.baseRef | text)
-        and ((.mergeCommitSha | type) == "null" or (.mergeCommitSha | text))
-        and ((.mergedAt | type) == "null" or (.mergedAt | text))
-        and (.url | text)
+        and (.headSha | text) and (.url | text)
       then
         "status=" + .status,
         "draft=" + (.isDraft | tostring),
         "head=" + .headSha,
-        "head_ref=" + .headRef,
-        "base_ref=" + .baseRef,
-        "merge_commit=" + (.mergeCommitSha // ""),
-        "merged_at=" + (.mergedAt // ""),
+        "head_ref=" + (.headRef | optional),
+        "base_ref=" + (.baseRef | optional),
+        "merge_commit=" + (.mergeCommitSha | optional),
+        "merged_at=" + (.mergedAt | optional),
         "url=" + .url
       else
         error("invalid pull request record")
@@ -1335,7 +1336,7 @@ FIELDS
   [ "$named" -eq 8 ] && [ "$total" -eq 8 ] || return 1
   [ -n "$state" ] && [ "$url" = "$expected" ] || return 1
   fm_pr_head_valid "$head" || return 1
-  [ -z "$merge_commit" ] || fm_pr_head_valid "$merge_commit" || return 1
+  fm_pr_head_valid "$merge_commit" || merge_commit=
   case "$draft" in true|false) ;; *) return 1 ;; esac
 
   # shellcheck disable=SC2034

@@ -2431,6 +2431,54 @@ o/r
   pass "Origin pull requests are armed by number, wake only on this pull request's merged status, and are never merged here"
 }
 
+# The Origin record reader requires only status, isDraft, headSha, and url. A
+# null, empty, or malformed headRef, baseRef, mergeCommitSha, or mergedAt reads
+# as empty instead of turning the whole read into an unknown, and a well-formed
+# value is still exported.
+test_origin_read_record_optional_fields() {
+  local dir url head merge
+  dir=$(make_case origin-read-optional)
+  url=https://cursor.com/codebase/o/r/pull/7
+  head=89abcdef0123456789abcdef0123456789abcdef
+  merge=0360f8e3b79d528c13f07ddcc61024275ec22a44
+  ln -sf "$REAL_JQ" "$dir/fakebin/jq"
+  fm_fake_origin "$dir/fakebin"
+
+  PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":\"$head\",\"headRef\":null,\"baseRef\":\"\",\"mergeCommitSha\":null,\"mergedAt\":null,\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record with null optional fields was an unknown"
+  [ "$FM_PR_RECORD_STATE" = merged ] && [ "$FM_PR_RECORD_MERGED" = true ] \
+    && [ "$FM_PR_RECORD_DRAFT" = false ] && [ "$FM_PR_RECORD_HEAD" = "$head" ] \
+    && [ "$FM_PR_RECORD_URL" = "$url" ] \
+    || fail "a record with null optional fields lost its required fields"
+  [ -z "$FM_PR_RECORD_HEAD_REF" ] && [ -z "$FM_PR_RECORD_BASE_REF" ] \
+    && [ -z "$FM_PR_RECORD_MERGE_COMMIT" ] && [ -z "$FM_PR_RECORD_MERGED_AT" ] \
+    || fail "null or empty optional fields were not exported as empty"
+
+  PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":\"$head\",\"headRef\":7,\"baseRef\":\"main\",\"mergeCommitSha\":\"abc\",\"mergedAt\":\"2026-10-29T22:33:41Z\",\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record with malformed optional fields was an unknown"
+  [ -z "$FM_PR_RECORD_HEAD_REF" ] && [ -z "$FM_PR_RECORD_MERGE_COMMIT" ] \
+    || fail "malformed optional fields were not exported as empty"
+  [ "$FM_PR_RECORD_BASE_REF" = main ] && [ "$FM_PR_RECORD_MERGED_AT" = 2026-10-29T22:33:41Z ] \
+    || fail "well-formed optional fields beside malformed ones were not exported"
+
+  PATH="$dir/fakebin:$BASE_PATH" FM_TEST_ORIGIN_STATUS=merged FM_TEST_ORIGIN_MERGE_COMMIT=$merge \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a full Origin record was an unknown"
+  [ "$FM_PR_RECORD_HEAD_REF" = fm/task ] && [ "$FM_PR_RECORD_BASE_REF" = main ] \
+    && [ "$FM_PR_RECORD_MERGE_COMMIT" = "$merge" ] && [ "$FM_PR_RECORD_MERGED_AT" = 2026-10-29T22:10:00Z ] \
+    || fail "well-formed optional fields were not exported"
+
+  ! PATH="$dir/fakebin:$BASE_PATH" \
+    FM_TEST_ORIGIN_RAW="{\"status\":\"merged\",\"isDraft\":false,\"headSha\":null,\"url\":\"$url\"}" \
+    fm_pr_origin_read_record cursor.com o/r 7 \
+    || fail "a record without a head was read"
+  [ -z "$FM_PR_RECORD_STATE" ] || fail "a failed Origin read left a status behind"
+}
+
 test_gitlab_merge_watch() {
   local dir state out rc url value noglab entry bindir name
   dir=$(make_case gitlab-merge-watch)
@@ -3906,6 +3954,7 @@ test_gitlab_merge_watch
 test_forgejo_merge_watch
 test_forgejo_login_list_shapes
 test_origin_merge_watch
+test_origin_read_record_optional_fields
 test_gerrit_merge_watch
 test_gerrit_arming_records_no_patch_set_revision
 test_gerrit_ready_gate_reads_the_published_tree

@@ -48,6 +48,7 @@ $ origin repo view aaalexliu/fm-origin-sandbox --json cloneUrl
 
 `origin pr view <n> -R <org>/<repo> --json <fields>` prints one compact JSON object holding exactly the requested fields; an unknown field exits 1 and lists the available ones.
 `fm_pr_origin_read_record` reads `status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url`, and the static poll in `bin/fm-pr-poll.sh` reads `status,url`.
+The record reader requires only `status`, `isDraft`, `headSha`, and `url`; it exports `headRef`, `baseRef`, `mergeCommitSha`, and `mergedAt` as empty when Origin reports them null, empty, or malformed.
 Origin spells the status `open`, `draft`, `merged`, or `closed`:
 
 ```
