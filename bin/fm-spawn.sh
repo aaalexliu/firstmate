@@ -702,6 +702,9 @@
 #   Local spawns never pass it and resolve their own carrier exactly as before.
 set -eu
 
+# Template replacements must stay literal on Bash 5.2+ and stock macOS Bash.
+shopt -u patsub_replacement 2>/dev/null || true
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
@@ -1293,7 +1296,7 @@ spawn_remote_secondmate() {
     harness=$("$FM_ROOT/bin/fm-harness.sh" secondmate "$id")
   fi
   case "$harness" in
-  claude | codex | opencode | pi | pi-signed | grok | kimi | cursor) ;;
+  claude | codex | opencode | pi | pi-signed | grok | kimi | cursor | omp) ;;
   *)
     fm_lock_release "$registry_lock" || true
     fm_lock_release "$SPAWN_TASK_LOCK" || true
