@@ -1,0 +1,81 @@
+## Origin's own view of the PRs (origin pr view --json status,isDraft,headSha,url)
+{"status":"closed","isDraft":false,"headSha":"f3196efd215ae3015e06c8b71543e0370e0d0257","url":"https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/3"}
+{"status":"draft","isDraft":true,"headSha":"73ffd987c23788e38b57e7ee8dfb54dbb554cffd","url":"https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/5"}
+{"status":"open","isDraft":false,"headSha":"884b9bc0db1926c712888f471f551aa89c60e39a","url":"https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6"}
+{"status":"merged","isDraft":false,"headSha":"09a8af05b3ae57ffc302bf9ce6bf7c45876b6faf","url":"https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9"}
+
+## 1. Register open PR 6: records pr= and Origin's head, arms poll; poll stays silent
+$ FM_HOME=$LAB bin/fm-pr-check.sh open6 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+armed: state/open6.check.sh
+(exit 0)
+pr=https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+pr_head=884b9bc0db1926c712888f471f551aa89c60e39a
+-- sidecar:
+origin
+https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+cursor.com
+aaalexliu/fm-origin-sandbox
+6
+-- poll:
+(poll exit 0, no output = no merge)
+
+## 2. Register draft PR 5: refused, records and arms nothing
+$ FM_HOME=$LAB bin/fm-pr-check.sh draft5 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/5
+error: https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/5 is a draft pull request; a draft cannot be merged, so merge monitoring would wait for an event that cannot occur - mark it ready for review and arm again, or declare a wait instead of done if the draft is deliberate
+(exit 1)
+pr= lines in meta: 0
+no check.sh armed
+
+## 3. Register merged PR 9: poll reports merged
+$ FM_HOME=$LAB bin/fm-pr-check.sh merged9 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9
+armed: state/merged9.check.sh
+(exit 0)
+pr=https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9
+pr_head=09a8af05b3ae57ffc302bf9ce6bf7c45876b6faf
+-- poll:
+merged
+(poll exit 0)
+
+## 4. Register closed (unmerged) PR 3: poll stays silent
+$ FM_HOME=$LAB bin/fm-pr-check.sh closed3 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/3
+armed: state/closed3.check.sh
+(exit 0)
+-- poll:
+(poll exit 0, no output = no merge)
+
+## 5. Spoofed or malformed Origin URLs are refused
+$ FM_HOME=$LAB bin/fm-pr-check.sh bad https://origin.cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+error: invalid PR check request
+(exit 2)
+$ FM_HOME=$LAB bin/fm-pr-check.sh bad https://cursor.com/codebase/x/aaalexliu/fm-origin-sandbox/pull/6
+error: invalid PR check request
+(exit 2)
+$ FM_HOME=$LAB bin/fm-pr-check.sh bad http://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+error: invalid PR check request
+(exit 2)
+$ FM_HOME=$LAB bin/fm-pr-check.sh bad https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/06
+error: invalid PR check request
+(exit 2)
+$ FM_HOME=$LAB bin/fm-pr-check.sh bad https://www.cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+error: invalid PR check request
+(exit 2)
+pr= lines in bad.meta: 0
+
+## 6. Nonexistent PR 999: unreadable record does not refuse; poll stays silent
+$ FM_HOME=$LAB bin/fm-pr-check.sh missing https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/999
+armed: state/missing.check.sh
+(exit 0)
+pr=https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/999
+(poll exit 0, no output = no merge)
+
+## 7. Merge wrapper refuses an Origin PR (a person merges in Origin)
+$ FM_HOME=$LAB bin/fm-pr-merge.sh open6 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+error: firstmate does not merge Cursor Origin pull requests yet: Origin PRs are merged in Origin for now, by a person, and the registered merge watch reports the merge
+(exit 2)
+{"status":"open"}
+
+## 8. Watcher pass over all armed polls: only PR 9 wakes
+(fm-watch exit 0)
+check: $LAB/state/merged9.check.sh: merged
+-- wake queue:
+1793321685	1	check	merged-merged9-https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9	check: merge landed: merged9 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9 external

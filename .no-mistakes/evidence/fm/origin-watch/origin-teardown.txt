@@ -1,0 +1,47 @@
+$ FM_HOME=$LAB bin/fm-pr-check.sh open6 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/6
+armed: state/open6.check.sh
+(exit 0)
+$ FM_HOME=$LAB bin/fm-pr-check.sh merged9 https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/9
+armed: state/merged9.check.sh
+(exit 0)
+
+Setup facts:
+- wt-open6 HEAD has one local commit: 0 remote branches contain it
+- wt-merged9 HEAD 09a8af0: 0 remote branches contain it
+- merging wt-merged9 HEAD into origin/main conflicts (merge-tree exit 1), so the content check cannot prove it landed
+
+## 9a. Teardown of open PR 6 task with unpushed work: must refuse
+$ FM_HOME=$LAB bin/fm-teardown.sh open6
+REFUSED: worktree $LAB/wt-open6 has work not on any remote and not landed.
+unpushed commits:
+3c34c89 unpushed local work
+Push the branch, land its PR, or get the captain's explicit OK to discard, then --force.
+(exit 1)
+open6.meta kept
+wt-open6 kept
+-- origin calls:
+origin pr view 6 -R aaalexliu/fm-origin-sandbox --json status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url
+
+## 9b. Control: merged PR 9 task with the BASE commit b936f040 (before this change)
+$ FM_HOME=$LAB <base>/bin/fm-teardown.sh merged9
+REFUSED: worktree $LAB/wt-merged9 has work not on any remote and not landed.
+unpushed commits:
+09a8af0 Add watch probe 4
+Push the branch, land its PR, or get the captain's explicit OK to discard, then --force.
+(exit 1)
+merged9.meta kept
+-- origin calls:
+
+## 9c. Merged PR 9 task with this change: proves landing through the Origin record
+$ FM_HOME=$LAB bin/fm-teardown.sh merged9
+$LAB/project: already current
+teardown merged9 complete (window fm-lab:fm-merged9, worktree $LAB/wt-merged9)
+Backlog: merged9 just finished (this home keeps no markdown backlog at $LAB/data/backlog.md). Update $LAB/data/backlog.md - move merged9 to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+(exit 0)
+merged9.meta removed (task torn down)
+-- origin calls:
+origin pr view 9 -R aaalexliu/fm-origin-sandbox --json status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url
+-- worker-runtime stub calls:
+no-mistakes axi status
+treehouse return --force $LAB/wt-merged9
+no-mistakes axi status

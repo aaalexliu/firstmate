@@ -1,0 +1,45 @@
+## 10. Registry binding forge=origin and the generated ship brief
+$ cat $LAB/data/projects.md
+# Projects
+
+- fm-origin-sandbox [no-mistakes forge=origin] - Cursor Origin sandbox (added 2026-10-29)
+- typo-sandbox [no-mistakes forge=orign] - misspelt binding (added 2026-10-29)
+$ bin/fm-project-mode.sh  fm-origin-sandbox
+no-mistakes off
+(exit 0)
+$ bin/fm-project-mode.sh --forge fm-origin-sandbox
+origin
+(exit 0)
+$ bin/fm-project-mode.sh --forge typo-sandbox   # adversarial: misspelt value
+refused: unknown forge "orign" registered for typo-sandbox in /private/var/folders/9q/w2xpy42n7qj6w2nkf3w4w2y00000gn/T/fm-lab.EcvfhX/data/projects.md; the accepted values are forge=gerrit, forge=forgejo, forge=origin, and forge=external, or no forge token at all for a forge whose pull requests no-mistakes already drives; correct the registry entry
+(exit 3)
+$ bin/fm-brief.sh origin-nm fm-origin-sandbox --mode no-mistakes --forge origin
+scaffolded: $LAB/data/origin-nm/brief.md (ship, mode=no-mistakes forge=origin; replace {TASK} and {FIRSTMATE_SPEC})
+(exit 0)
+$ bin/fm-brief.sh origin-lo fm-origin-sandbox --mode local-only --forge origin   # adversarial
+error: fm-brief.sh --forge: forge=origin cannot ship mode=local-only - that mode publishes nothing, so a forge has no meaning there, and its landing would fast-forward local main with content the review server has never seen; ship no-mistakes or direct-PR, which publish through the forge
+(exit 0)
+
+-- generated brief $LAB/data/origin-nm/brief.md (delivery-related lines):
+16:You are in a disposable git worktree of fm-origin-sandbox, at a detached HEAD on a clean default branch.
+22:1. First action: create your branch: `git checkout -b fm/origin-nm --`
+26:1. Never push to the default branch. Never merge a PR.
+27:2. Keep project edits inside this worktree; keep proof and scratch output outside it, under `$LAB/data/origin-nm/` or a temporary directory.
+30:3. Use the origin CLI for Cursor Origin operations and chrome-devtools-axi for browser operations.
+32:   `echo "{state} [at=<epoch>]: {one short line}" >> '$LAB/state/origin-nm.status' && { [ ! -e '$LAB/config/fleet-ledger' ] || '/Users/alexliu/.no-mistakes/worktrees/3f37378d32a7/01M651NKMNNJX3Z088YXMEDVM0/bin/fm-fleet-ledger.sh' appended '$LAB/config' '$LAB/state/origin-nm.status' >/dev/null 2>&1 || true; }`
+56:   For a no-mistakes ask-user gate specifically, escalate all ask-user findings as one event plus one snapshot file, using that same shape even when the gate holds only a single ask-user finding: write only the ask-user findings, verbatim and unparaphrased (id, severity, file, line, description, authority), to `$LAB/data/origin-nm/nm-<run>-findings.txt`, then report the gate with
+57:   `needs-decision [at=<epoch>] [key=nm-<run>-<step>]: ask-user findings=<id1>,<id2>,... file=$LAB/data/origin-nm/nm-<run>-findings.txt`
+88:Firstmate steers you through durable message files in '$LAB/state/origin-nm.inbox'.
+89:When a terminal message says an instruction is waiting there - and at any natural checkpoint when you are unsure - list them with `find '$LAB/state/origin-nm.inbox' -maxdepth 1 -name '*.msg' 2>/dev/null | sort -V`, read the complete contents of each record (including its final line even when it is not newline-terminated) and act on each message in numeric order, then acknowledge each handled message by moving it: `mv '$LAB/state/origin-nm.inbox'/NNN.msg '$LAB/state/origin-nm.inbox'/handled/`.
+98:Delivery contract: mode=no-mistakes forge=origin
+99:Ship branch: fm/origin-nm
+100:This project's forge is Cursor Origin, whose pull requests and checks the pipeline's `pr` and `ci` steps do not drive, so **no-mistakes runs here as a validation pass that pushes the branch**, and you then open the PR yourself with the `origin` CLI.
+101:Pass `--skip pr,ci` on every `no-mistakes axi run` for this task, and skip nothing else: `review`, `test`, `document`, `lint`, and `push` still run.
+137:3. Find the PR for your branch first: `origin pr view fm/origin-nm --json number,url` prints it when one is open. If one exists, update its title and body with `origin pr edit <number> --title '<title>' --body-file <path>`. Otherwise open it from this copy with `origin pr create --head fm/origin-nm --title '<title>' --body-file <path>`, ready for review, not a draft; it takes the repository from this copy's `origin` remote and targets its default branch.
+138:4. Take the PR's number and URL from `origin pr view fm/origin-nm --json number,url`, never by building the URL yourself: Origin serves the PR page at a `https://cursor.com/codebase/...` address, not on the `origin.cursor.com` git host.
+139:5. Never comment on, review, merge, or close this PR or any other; a person merges it in Origin.
+140:6. Read the PR's checks with `origin pr checks <number>`. It exits 0 when every reported check passed, and exits 1 printing `No checks reported.` when the project reports none: that is not a failed check and needs no fix. While a reported check is still running, wait with `origin pr checks <number> --watch`, under the ten-minute command limit as the driving block bounds its waits, then read the checks again; never pass `--watch` for a PR that reports no checks, because it then waits indefinitely. If a check fails, commit the fix, drive a new run with the same `--skip pr,ci`, and update the PR text if the change affects it.
+141:Then read the PR back from the forge and confirm it is not a draft (`origin pr view <number> --json isDraft` must print `"isDraft":false`, where <number> is the PR number `origin pr view` printed); if it is a draft, mark it ready with `origin pr ready <number>`.
+142:A draft cannot be merged, so a done report on one leaves the merge unasked.
+143:Then append `done [at=<epoch>]: PR {url} checks green` and stop, with {url} exactly as `origin pr view` printed it. You are finished.
+146:A person merges the PR in Origin; firstmate watches for the merge and relays the outcome.
