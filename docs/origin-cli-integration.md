@@ -216,7 +216,7 @@ Lines from `bin/fm-guard.sh` about the scratch home's supervision are omitted.
 - `mergeability.mergeConflictState` is `MERGE_CONFLICT_STATE_CLEAN` only for a clean answer; the CLI's own guide says `MERGE_CONFLICT_STATE_PENDING` "means Origin is still checking, so `hasMergeConflicts: false` beside it is not clean".
 - `mergeability.evaluatedHeadSha` names the head the verdict was computed at.
 - `parentChangeId` is set on a stacked pull request and stays set after its parent merges.
-- `origin repo view <org>/<repo> --json allowSquashMerge,allowMergeCommit` reads the repository's allowed methods; `origin pr merge` offers only `--merge` and `--squash`, with no rebase merge.
+- `origin pr merge` offers only `--merge` and `--squash`, with no rebase merge; the merge passes `--squash` unless the caller names `--merge`, and leaves a method the repository disallows for `origin pr merge` to refuse.
 - `origin pr merge <n> --match-head-commit <sha>` refuses when the head moved, and without `--auto` it merges now.
 - A user principal cannot post check runs: `POST /repos/{owner}/{repo}/check-runs` through `origin api` answers `HTTP 403` with `"This Origin endpoint does not support user principals"`.
 
@@ -295,7 +295,8 @@ ba1a256c2c60b3f2f68cd146b117614bc2cdddd5 6d085c48a9bc0f4a0293bee7dbc5e0b60d7f7ef
 
 ### A push after registration refuses
 
-A second commit pushed after registration moves the live head away from the recorded one, so the merge refuses; the refused run re-records the new head, so a retry after reviewing it merges that head:
+A second commit pushed after registration moves the live head away from the recorded one, so the merge refuses.
+This run predates the merge keeping the recorded head: its last line shows the head it re-recorded, where the merge now leaves `713882b7175272aa8a22b34ca993cf8279750a61`, so a retry still refuses until the moved head is reviewed and a fresh `fm-pr-check.sh` registration from a done report records it:
 
 ```
 $ fm-pr-check.sh task-live https://cursor.com/codebase/aaalexliu/fm-origin-sandbox/pull/13
@@ -402,5 +403,5 @@ exit=1
 
 - A no-mistakes run pushing to an `origin.cursor.com` remote with `--skip pr,ci`; the generated brief relies on the pipeline's push step reaching Origin like any Git remote.
 - A pending or failing check: a user principal cannot post one (the 403 above), and `origin pr gate` "is not enabled for your account yet", so the merge path's refusal of queued, running, and failing check runs and the `--allow-red` waiver rest on the CLI's own enums and passing set quoted above.
-- A merge command that succeeds without a provable landing, and a repository that allows only one merge method.
+- A merge command that succeeds without a provable landing, and `origin pr merge` refusing a method the repository disallows.
 - On the verification machine, Apple Git 2.54 (`/usr/bin/git`) hung on every fetch from `origin.cursor.com` with the per-clone helper set, while Homebrew Git 2.33 fetched normally; the watch end-to-end run used Homebrew Git.

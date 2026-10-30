@@ -620,17 +620,17 @@ make_forgejo_case() {
   printf '%s\n' "$case_dir"
 }
 
-# origin mock recording every invocation. "repo view" answers from
-# origin-repo.json, or both merge methods allowed when that file is absent. Any
-# other "pr view", the registration read and the pre-merge read alike, answers
+# origin mock recording every invocation. Any "pr view" other than the
+# post-merge read, the registration read and the pre-merge read alike, answers
 # with exactly the requested fields of origin-pr.json, as the live CLI does, or
 # with the file unchanged when it is not a JSON object; the post-merge read of
 # status,mergeCommitSha,mergedAt answers from origin-pr-post.json once a merge
 # has landed and as a still-open pull request before that, after failing the
 # number of times origin-post-merge-view-failures holds. "pr merge" is the one
-# path that can land a merge: it fails on origin-merge-fails or a
-# --match-head-commit other than origin-expected-head, and on origin-merge-noop
-# it exits 0 without landing anything, the unproved outcome.
+# path that can land a merge: it fails on origin-merge-fails, a
+# --match-head-commit other than origin-expected-head, or the method
+# origin-disallowed-method names, and on origin-merge-noop it exits 0 without
+# landing anything, the unproved outcome.
 add_origin_mock() {
   local case_dir=$1
   cat > "$case_dir/fakebin/origin" <<'SH'
@@ -650,14 +650,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$sub" in
-  "repo view")
-    [ ! -e "$log_dir/origin-repo-fails" ] || { echo 'Error: repo view failed' >&2; exit 1; }
-    if [ -e "$log_dir/origin-repo.json" ]; then
-      cat "$log_dir/origin-repo.json"
-    else
-      printf '{"allowSquashMerge":true,"allowMergeCommit":true}\n'
-    fi
-    ;;
   "pr view")
     if [ "$json" = status,mergeCommitSha,mergedAt ]; then
       if [ -s "$log_dir/origin-post-merge-view-failures" ]; then
@@ -687,6 +679,11 @@ case "$sub" in
     if [ -e "$log_dir/origin-expected-head" ] \
       && [ "$head" != "$(cat "$log_dir/origin-expected-head")" ]; then
       echo 'Error: the pull request head moved' >&2
+      exit 1
+    fi
+    if [ -e "$log_dir/origin-disallowed-method" ] \
+      && [ "$method" = "$(cat "$log_dir/origin-disallowed-method")" ]; then
+      echo "Error: $method merges are not allowed on this repository" >&2
       exit 1
     fi
     printf '%s\n' "$method" > "$log_dir/origin-merge-method"
@@ -2914,6 +2911,42 @@ test_origin_without_recorded_head_refuses() {
   pass "fm-pr-merge refuses a Cursor Origin merge with no recorded head to confirm"
 }
 
+# A refused moved head is not accepted by retrying: the merge run keeps the
+# recorded head, so only a fresh registration from a done report moves it.
+test_origin_moved_head_retry_still_refuses() {
+  local case_dir attempt rc
+  case_dir=$(make_origin_case origin-moved-head-retry head=$OG_STALE_HEAD \
+    evaluated_head=$OG_STALE_HEAD checks=ci:completed:success:$OG_STALE_HEAD)
+  printf '%s\n' "$OG_STALE_HEAD" > "$case_dir/origin-expected-head"
+  for attempt in 1 2; do
+    run_origin_refusal "$case_dir" "origin-moved-head-retry-$attempt" 1
+    assert_grep "the live head $OG_STALE_HEAD is not the recorded head $OG_HEAD; the moved head must be reviewed and re-reported done" \
+      "$case_dir/stderr" "origin-moved-head-retry-$attempt: the moved head refusal was not reported"
+    [ "$(grep '^pr_head=' "$case_dir/state/task-x1.meta")" = "pr_head=$OG_HEAD" ] \
+      || fail "origin-moved-head-retry-$attempt: the refused merge moved the recorded head: $(grep '^pr_head=' "$case_dir/state/task-x1.meta")"
+  done
+
+  set +e
+  FM_ROOT_OVERRIDE="$ROOT" \
+  FM_HOME="$case_dir/home" \
+  FM_STATE_OVERRIDE="$case_dir/state" \
+  FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+  HOME="$case_dir/user-home" \
+  PATH="$case_dir/fakebin:$PATH" \
+    "$ROOT/bin/fm-pr-check.sh" task-x1 "$OG_URL" \
+    > "$case_dir/register.out" 2> "$case_dir/register.err"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-moved-head-retry: re-registering the pull request failed: $(cat "$case_dir/register.err")"
+  grep -qxF "pr_head=$OG_STALE_HEAD" "$case_dir/state/task-x1.meta" \
+    || fail "origin-moved-head-retry: a fresh registration did not record the moved head"
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-moved-head-retry: the re-registered head should merge: $(cat "$case_dir/stderr")"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_STALE_HEAD" ] \
+    || fail "origin-moved-head-retry: the merge was not bound to the re-registered head: '$(origin_merge_line "$case_dir/origin.log")'"
+  pass "fm-pr-merge keeps refusing a moved Cursor Origin head on retry until a fresh registration records it"
+}
+
 test_origin_unreadable_state_refuses() {
   local case_dir variant
   for variant in view-fails not-json no-groups bad-head; do
@@ -3000,21 +3033,18 @@ test_origin_allow_no_pipeline_waives_only_no_checks() {
 }
 
 test_origin_merge_method_and_extra_args() {
-  local case_dir spec name args repo expected method
-  # The method the caller names, else squash, else a merge commit, and always
-  # one the repository allows.
+  local case_dir spec name args expected method rc
+  # The method the caller names, else squash.
   set -- \
-    "default-squash||{\"allowSquashMerge\":true,\"allowMergeCommit\":true}|squash" \
-    "default-merge-commit||{\"allowSquashMerge\":false,\"allowMergeCommit\":true}|merge" \
-    "named-merge|--merge|{\"allowSquashMerge\":true,\"allowMergeCommit\":true}|merge" \
-    "method-equals|--method=merge|{\"allowSquashMerge\":true,\"allowMergeCommit\":true}|merge" \
-    "method-value|--method squash|{\"allowSquashMerge\":true,\"allowMergeCommit\":false}|squash"
+    "default-squash||squash" \
+    "named-merge|--merge|merge" \
+    "method-equals|--method=merge|merge" \
+    "method-value|--method squash|squash"
   for spec in "$@"; do
-    IFS='|' read -r name args repo method <<EOF
+    IFS='|' read -r name args method <<EOF
 $spec
 EOF
     case_dir=$(make_origin_case "origin-method-$name")
-    printf '%s\n' "$repo" > "$case_dir/origin-repo.json"
     # shellcheck disable=SC2086 # the extra arguments are deliberately word-split
     run_pr_merge "$case_dir" task-x1 "$OG_URL" -- $args \
       > "$case_dir/stdout" 2> "$case_dir/stderr" \
@@ -3024,31 +3054,38 @@ EOF
   done
 
   set -- \
-    "squash-disallowed|--squash|{\"allowSquashMerge\":false,\"allowMergeCommit\":true}|the repository does not allow squash merges" \
-    "merge-disallowed|--merge|{\"allowSquashMerge\":true,\"allowMergeCommit\":false}|the repository does not allow merge merges" \
-    "neither-allowed||{\"allowSquashMerge\":false,\"allowMergeCommit\":false}|the repository allows neither squash nor merge commits" \
-    "settings-unreadable||{\"allowSquashMerge\":null}|the repository's allowed merge methods could not be read" \
-    "rebase|--rebase||Cursor Origin has no rebase merge" \
-    "method-rebase|--method rebase||Cursor Origin merges only with --squash or --merge, not \"rebase\"" \
-    "bypass|--bypass-rules||extra merge arguments other than a merge method are not supported for Cursor Origin merges" \
-    "subject|--squash --subject x||extra merge arguments other than a merge method are not supported for Cursor Origin merges"
+    "rebase|--rebase|Cursor Origin has no rebase merge" \
+    "method-rebase|--method rebase|Cursor Origin merges only with --squash or --merge, not \"rebase\"" \
+    "bypass|--bypass-rules|extra merge arguments other than a merge method are not supported for Cursor Origin merges" \
+    "subject|--squash --subject x|extra merge arguments other than a merge method are not supported for Cursor Origin merges"
   for spec in "$@"; do
-    IFS='|' read -r name args repo expected <<EOF
+    IFS='|' read -r name args expected <<EOF
 $spec
 EOF
     case_dir=$(make_origin_case "origin-method-refuse-$name")
-    [ -z "$repo" ] || printf '%s\n' "$repo" > "$case_dir/origin-repo.json"
     # shellcheck disable=SC2086 # the extra arguments are deliberately word-split
     run_origin_refusal "$case_dir" "origin-method-refuse-$name" 1 -- $args
     assert_grep "$expected" "$case_dir/stderr" \
       "origin-method-refuse-$name: the refusal did not name its reason"
   done
 
-  case_dir=$(make_origin_case origin-method-repo-fails)
-  : > "$case_dir/origin-repo-fails"
-  run_origin_refusal "$case_dir" origin-method-repo-fails 1
-  assert_grep "the repository's allowed merge methods could not be read" "$case_dir/stderr" \
-    "origin-method-repo-fails: the unreadable repository was not reported"
+  # A method the repository disallows is Origin's own refusal, never a switch
+  # to another method.
+  case_dir=$(make_origin_case origin-method-disallowed)
+  printf 'squash\n' > "$case_dir/origin-disallowed-method"
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  [ "$rc" -ne 0 ] || fail "origin-method-disallowed: a disallowed squash should fail the merge"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-method-disallowed: unexpected merge invocation: '$(origin_merge_line "$case_dir/origin.log")'"
+  assert_grep 'squash merges are not allowed on this repository' "$case_dir/stderr" \
+    "origin-method-disallowed: Origin's refusal was not shown"
+  assert_grep "the Cursor Origin merge command for $OG_URL failed" "$case_dir/stderr" \
+    "origin-method-disallowed: the failed merge was not reported"
+  assert_absent "$case_dir/origin-merged" "origin-method-disallowed: the mock recorded a landed merge"
+  assert_absent "$case_dir/state/.wake-queue" "origin-method-disallowed: a refused merge left a landed outcome"
 
   # Auto-merge stays out of reach even with the attended override that
   # re-enables it on GitHub.
@@ -3066,7 +3103,7 @@ EOF
   run_origin_refusal "$case_dir" origin-repo-override 1 -- -R other/repo
   assert_grep 'extra merge arguments must not override the repository' "$case_dir/stderr" \
     "origin-repo-override: a caller repository was not refused"
-  pass "fm-pr-merge picks an Origin merge method the repository allows and refuses every other extra argument"
+  pass "fm-pr-merge merges Origin with the named method or squash, leaves a disallowed one for Origin to refuse, and refuses every other extra argument"
 }
 
 # Only a read-back of status merged with a merge commit and a time proves the
@@ -3603,6 +3640,7 @@ test_origin_registered_head_is_the_merge_head
 test_origin_each_condition_refuses_independently
 test_origin_reports_every_failing_condition
 test_origin_without_recorded_head_refuses
+test_origin_moved_head_retry_still_refuses
 test_origin_unreadable_state_refuses
 test_origin_allow_red_waives_only_the_named_check
 test_origin_allow_no_pipeline_waives_only_no_checks

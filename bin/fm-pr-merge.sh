@@ -18,9 +18,8 @@
 # --squash, --merge, --rebase, or --method after the optional -- separator.
 # On Forgejo the merge style defaults to the repository's own
 # default_merge_style, read live, and a merge is refused when it cannot be read.
-# On Origin the method defaults to squash, or to a merge commit when the
-# repository disallows squash, and any method is refused unless the
-# repository's allowSquashMerge or allowMergeCommit, read live, permits it.
+# On Origin the method defaults to squash, and "origin pr merge" itself
+# refuses a method the repository disallows.
 # A GitHub merge is refused unless every pre-merge condition holds, each read
 # live at merge time rather than taken from recorded metadata: the pull request
 # is open, not a draft, mergeable, free of conflicts, every unwaived check
@@ -145,8 +144,9 @@
 # A Cursor Origin merge is refused unless every pre-merge condition holds, each
 # read from one live "origin pr view --json" at merge time: the pull request is
 # the URL being merged, its status is open and isDraft is false, its head is
-# the pr_head recorded for the task before this run (the re-recording below
-# replaces it, so a retry after reviewing a moved head merges that head), it
+# the pr_head recorded for the task (the re-recording below keeps it, so only
+# a fresh registration from a done report moves it, and a retry still refuses
+# a moved head), it
 # has no stack parent (parentChangeId), its mergeability reads mergeable true,
 # hasMergeConflicts false, mergeConflictState MERGE_CONFLICT_STATE_CLEAN (a
 # pending conflict check is not a clean answer, and an absent state refuses),
@@ -929,53 +929,19 @@ origin_reject_unsupported_args() {
 }
 
 # The Origin merge method: the caller's own, or squash (the GitHub default)
-# when the caller names none and the repository allows it, else a merge commit.
-# Either way the method must be one the repository's allowSquashMerge or
-# allowMergeCommit, read live, permits; an unreadable setting refuses rather
-# than letting Origin pick.
+# when the caller names none. "origin pr merge" itself refuses a method the
+# repository disallows.
 origin_merge_method() {
-  local method repo_json fields allow_squash='' allow_merge='' line
+  local method
   method=$(caller_merge_method "$@")
   case "$method" in
-    ''|squash|merge) ;;
+    '') method=squash ;;
+    squash|merge) ;;
     *)
       echo "error: refusing to merge $URL: Cursor Origin merges only with --squash or --merge, not \"$method\"" >&2
       return 1
       ;;
   esac
-  if ! repo_json=$(origin repo view "$PR_OWNER/$PR_REPO" \
-      --json allowSquashMerge,allowMergeCommit 2>/dev/null) \
-    || ! fields=$(printf '%s' "$repo_json" | jq -r '
-        if type == "object" and (.allowSquashMerge | type) == "boolean"
-          and (.allowMergeCommit | type) == "boolean"
-        then "squash=" + (.allowSquashMerge | tostring), "merge=" + (.allowMergeCommit | tostring)
-        else error("repository merge settings are unreadable") end' 2>/dev/null); then
-    echo "error: refusing to merge $URL: the repository's allowed merge methods could not be read" >&2
-    return 1
-  fi
-  while IFS= read -r line; do
-    case "$line" in
-      squash=*) allow_squash=${line#squash=} ;;
-      merge=*) allow_merge=${line#merge=} ;;
-    esac
-  done <<FIELDS
-$fields
-FIELDS
-  if [ -z "$method" ]; then
-    if [ "$allow_squash" = true ]; then
-      method=squash
-    elif [ "$allow_merge" = true ]; then
-      method=merge
-    else
-      echo "error: refusing to merge $URL: the repository allows neither squash nor merge commits" >&2
-      return 1
-    fi
-  fi
-  if { [ "$method" = squash ] && [ "$allow_squash" != true ]; } \
-    || { [ "$method" = merge ] && [ "$allow_merge" != true ]; }; then
-    echo "error: refusing to merge $URL: the repository does not allow $method merges" >&2
-    return 1
-  fi
   printf '%s' "$method"
 }
 
@@ -1098,7 +1064,7 @@ CHECKS
     refusals="$refusals  - no head was recorded for this pull request before this run, so the live head $live_head cannot be confirmed
 "
   elif [ "$RECORDED_HEAD" != "$live_head" ]; then
-    refusals="$refusals  - the live head $live_head is not the recorded head $RECORDED_HEAD
+    refusals="$refusals  - the live head $live_head is not the recorded head $RECORDED_HEAD; the moved head must be reviewed and re-reported done, which registers it, before it can merge
 "
   fi
   [ -z "$parent" ] \
