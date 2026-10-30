@@ -12,8 +12,7 @@
 # Origin pull request is addressed through the origin CLI by the derived
 # org/repository. A Gerrit
 # change is refused outright: that adapter is read-only, and the refusal at the
-# parse below owns why. A Cursor Origin pull request is refused too, because
-# Origin support is watch-only for now and a person merges it in Origin.
+# parse below owns why.
 #
 # Merge method on GitHub defaults to --squash when the caller passes none of
 # --squash, --merge, --rebase, or --method after the optional -- separator.
@@ -276,13 +275,6 @@ PROJECT_URL="https://$FM_PR_HOST/$FM_PR_PATH"
 # rather than a capability limit, so it is enforced here rather than assumed.
 if [ "$PROVIDER" = gerrit ]; then
   echo "error: firstmate does not submit a Gerrit change: submitting requires an attributed human approval it must not manufacture, so a human submits the change on the server" >&2
-  exit 2
-fi
-# Origin support is watch-only for now: firstmate registers and watches an
-# Origin pull request and proves it landed at cleanup, but has no guarded merge
-# for one yet, so the refusal comes before anything is recorded.
-if [ "$PROVIDER" = origin ]; then
-  echo "error: firstmate does not merge Cursor Origin pull requests yet: Origin PRs are merged in Origin for now, by a person, and the registered merge watch reports the merge" >&2
   exit 2
 fi
 shift 2

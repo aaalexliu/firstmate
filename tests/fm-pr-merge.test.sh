@@ -621,8 +621,10 @@ make_forgejo_case() {
 }
 
 # origin mock recording every invocation. "repo view" answers from
-# origin-repo.json, or both merge methods allowed when that file is absent. The
-# pre-merge "pr view" answers from origin-pr.json; the post-merge read of
+# origin-repo.json, or both merge methods allowed when that file is absent. Any
+# other "pr view", the registration read and the pre-merge read alike, answers
+# with exactly the requested fields of origin-pr.json, as the live CLI does, or
+# with the file unchanged when it is not a JSON object; the post-merge read of
 # status,mergeCommitSha,mergedAt answers from origin-pr-post.json once a merge
 # has landed and as a still-open pull request before that, after failing the
 # number of times origin-post-merge-view-failures holds. "pr merge" is the one
@@ -672,7 +674,9 @@ case "$sub" in
       fi
     else
       [ ! -e "$log_dir/origin-view-fails" ] || { echo 'Error: view failed' >&2; exit 1; }
-      cat "$log_dir/origin-pr.json"
+      jq -ce --arg fields "$json" 'select(type == "object")
+        | with_entries(select(.key as $k | ($fields | split(",") | index($k)) != null))' \
+        "$log_dir/origin-pr.json" 2>/dev/null || cat "$log_dir/origin-pr.json"
     fi
     ;;
   "pr merge")
@@ -742,8 +746,9 @@ EOF
     groups="{\"name\":\"CI\",\"checkRuns\":[$runs]}"
   fi
   [ -z "$blockers" ] || blockers="{\"kind\":\"$blockers\"}"
-  printf '{"number":5,"url":"%s","status":"%s","isDraft":%s,"headSha":"%s","parentChangeId":%s,' \
-    "$url" "$status" "$draft" "$head" "$parent" > "$file"
+  printf '{"number":5,"url":"%s","status":"%s","isDraft":%s,"headSha":"%s","headRef":"fm/task-x1","baseRef":"main",' \
+    "$url" "$status" "$draft" "$head" > "$file"
+  printf '"mergeCommitSha":null,"mergedAt":null,"parentChangeId":%s,' "$parent" >> "$file"
   printf '"mergeability":{"mergeable":%s,"hasMergeConflicts":%s,"mergeConflictState":%s,"evaluatedHeadSha":"%s",' \
     "$mergeable" "$conflicts" "$conflict_state" "$evaluated_head" >> "$file"
   printf '"mergeability":{"verdict":"%s","blockers":[%s]}},"ciState":{"checkRunGroups":[%s]}}\n' \
@@ -2795,6 +2800,44 @@ test_origin_url_resolves_and_merges() {
   pass "fm-pr-merge merges a green Cursor Origin pull request bound to its recorded head and reports the merge commit"
 }
 
+# A ready report registers the pull request through bin/fm-pr-check.sh, which
+# records the head Origin reports as pr_head; that recorded head is the one the
+# merge requires, so a task registered that way merges with no head written by
+# hand.
+test_origin_registered_head_is_the_merge_head() {
+  local case_dir rc
+  case_dir=$(make_origin_case origin-registered-head)
+  grep -v -e '^pr=' -e '^pr_head=' "$case_dir/state/task-x1.meta" > "$case_dir/meta.new"
+  "$REAL_MV" "$case_dir/meta.new" "$case_dir/state/task-x1.meta"
+
+  set +e
+  FM_ROOT_OVERRIDE="$ROOT" \
+  FM_HOME="$case_dir/home" \
+  FM_STATE_OVERRIDE="$case_dir/state" \
+  FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+  HOME="$case_dir/user-home" \
+  PATH="$case_dir/fakebin:$PATH" \
+    "$ROOT/bin/fm-pr-check.sh" task-x1 "$OG_URL" \
+    > "$case_dir/register.out" 2> "$case_dir/register.err"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-registered-head: registering the pull request failed: $(cat "$case_dir/register.err")"
+  assert_grep "pr view 5 -R $OG_ORG/$OG_REPO --json status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url" \
+    "$case_dir/origin.log" "origin-registered-head: registration did not read the pull request record"
+  grep -qxF "pr_head=$OG_HEAD" "$case_dir/state/task-x1.meta" \
+    || fail "origin-registered-head: registration did not record the Origin-reported head as pr_head"
+
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-registered-head: the registered pull request should merge: $(cat "$case_dir/stderr")"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-registered-head: the merge was not bound to the registered head: '$(origin_merge_line "$case_dir/origin.log")'"
+  pass "fm-pr-check records the Origin-reported head at registration, and fm-pr-merge merges at that head"
+}
+
 test_origin_each_condition_refuses_independently() {
   local case_dir name expected spec
   set -- \
@@ -3554,6 +3597,7 @@ test_forgejo_rejected_merge_is_never_trusted_by_exit_status
 test_forgejo_transient_confirm_read_failure_still_persists_authority
 test_forgejo_merge_method_and_extra_args
 test_origin_url_resolves_and_merges
+test_origin_registered_head_is_the_merge_head
 test_origin_each_condition_refuses_independently
 test_origin_reports_every_failing_condition
 test_origin_without_recorded_head_refuses

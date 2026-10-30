@@ -15,8 +15,8 @@
 #   The project's forge IS read from data/projects.md, because it is the
 #   captain's confirmed project fact rather than a per-task choice: a spawn
 #   refuses a brief whose `forge=` disagrees with the registered binding in
-#   either direction, and refuses --yolo on for a forge=gerrit, forge=origin,
-#   or forge=external project, where yolo is inactive (bin/fm-project-mode.sh's
+#   either direction, and refuses --yolo on for a forge=gerrit or
+#   forge=external project, where yolo is inactive (bin/fm-project-mode.sh's
 #   header carries that decision). The project's pr=manual binding is read the
 #   same way and agrees with the brief's " pr=manual" contract suffix in either
 #   direction; only a no-mistakes ship takes it, so a no-mistakes-prod-only
@@ -4074,12 +4074,6 @@ if [ "$KIND" = ship ]; then
   # manufacture one.
   if [ "$STANDING_FORGE" = gerrit ] && [ "$YOLO" = on ]; then
     echo "error: --yolo on is refused for $ID: $PROJ_NAME is registered forge=gerrit, where yolo is inactive because a Code-Review+2 is a positive attributed claim that a named human approved and firstmate must not manufacture one (captain's decision 2026-09-15); spawn with --yolo off" >&2
-    exit 1
-  fi
-  # Origin support is watch-only for now: firstmate has no guarded merge for an
-  # Origin pull request, so merge authority has nothing to authorize.
-  if [ "$STANDING_FORGE" = origin ] && [ "$YOLO" = on ]; then
-    echo "error: --yolo on is refused for $ID: $PROJ_NAME is registered forge=origin, where yolo is inactive because firstmate cannot merge a Cursor Origin pull request yet and a person merges it in Origin; spawn with --yolo off" >&2
     exit 1
   fi
   # An external review tool uploads its own snapshot, so this task must never

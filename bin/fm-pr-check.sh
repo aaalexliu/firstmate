@@ -176,7 +176,8 @@ fi
 # recorded and otherwise diffs the local branch, which is the current content.
 # bin/fm-pr-merge.sh reads a GitLab or Forgejo head live at merge time for the
 # same reason, and treats a recorded value that disagrees as stale rather than
-# authoritative.
+# authoritative. An Origin merge instead requires the head recorded here, and
+# refuses a live head that differs from it.
 WT=$(grep '^worktree=' "$META" | tail -1 | cut -d= -f2- || true)
 PR_HEAD=
 if [ "$PROVIDER" = github ] && [ -n "$WT" ] && [ -d "$WT" ] && command -v gh >/dev/null 2>&1; then

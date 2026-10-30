@@ -2330,8 +2330,8 @@ SH
 # status on a record whose url is this pull request's wakes the poll; every
 # other status, a record for another pull request, a failed read, and an absent
 # CLI stay silent. Arming refuses without the CLI, refuses a positive draft,
-# and records the forge-reported head; the merge wrapper refuses outright
-# because Origin pull requests are merged in Origin for now.
+# and records the forge-reported head; tests/fm-pr-merge.test.sh covers the
+# guarded merge.
 test_origin_merge_watch() {
   local dir state out rc url value head
   dir=$(make_case origin-merge-watch)
@@ -2415,20 +2415,7 @@ o/r
     [ -z "$out" ] || fail "Origin poll emitted for a doctored sidecar: $value"
   done
 
-  # The merge wrapper refuses before reading or recording anything.
-  write_task_meta "$dir" task-m
-  cp "$state/task-m.meta" "$dir/merge-meta.before"
-  : > "$dir/origin.log"
-  set +e
-  FM_TEST_ORIGIN_LOG="$dir/origin.log" run_merge_entry "$dir" task-m "$url" >/dev/null 2> "$dir/merge.err"
-  rc=$?
-  set -e
-  [ "$rc" -eq 2 ] || fail "the merge wrapper did not refuse an Origin pull request (rc=$rc)"
-  grep -qF 'Origin PRs are merged in Origin for now' "$dir/merge.err" \
-    || fail "the Origin merge refusal did not say Origin PRs are merged in Origin: $(cat "$dir/merge.err")"
-  [ ! -s "$dir/origin.log" ] || fail "the Origin merge refusal still read the forge"
-  cmp -s "$dir/merge-meta.before" "$state/task-m.meta" || fail "the Origin merge refusal changed the task metadata"
-  pass "Origin pull requests are armed by number, wake only on this pull request's merged status, and are never merged here"
+  pass "Origin pull requests are armed by number with the forge-reported head and wake only on this pull request's merged status"
 }
 
 # The Origin record reader requires only status, isDraft, headSha, and url. A
