@@ -1871,11 +1871,12 @@ STUB
 }
 
 # origin rides the same binding: the spawn's agreement check and promotion's
-# registry read carry it, its contract names the origin CLI, and yolo is
-# refused because firstmate cannot merge an Origin pull request yet.
+# registry read carry it, its contract names the origin CLI, and it keeps yolo
+# like forgejo, because bin/fm-pr-merge.sh merges an Origin pull request
+# through the same guarded merge authority.
 test_forge_origin_rides_the_same_binding() {
   local rec home proj fakebin out status sendroot meta payload id
-  rec=$(make_home forge-origin "- proj [direct-PR forge=origin] - fixture (added 2026-01-01)")
+  rec=$(make_home forge-origin "- proj [direct-PR +yolo forge=origin] - fixture (added 2026-01-01)")
   IFS='|' read -r home proj fakebin <<EOF
 $rec
 EOF
@@ -1892,15 +1893,8 @@ EOF
     || fail "an origin direct-PR brief should scaffold"
   fill_brief_subsections "$home/data/forge-origin-s2/brief.md" "Open the pull request." "Ship it."
   out=$(run_spawn "$home" "$fakebin" forge-origin-s2 "$proj" claude --mode direct-PR --yolo on 2>&1)
-  status=$?
-  [ "$status" -ne 0 ] || fail "an origin project launched with --yolo on"
   assert_not_contains "$out" "forge mismatch" "an agreeing origin brief and registry were reported as drift"
-  assert_contains "$out" "--yolo on is refused for forge-origin-s2" "yolo on an origin project was not refused"
-  assert_contains "$out" "registered forge=origin" "the yolo refusal did not name the origin forge"
-  assert_absent "$home/state/forge-origin-s2.meta" "the refused yolo spawn still recorded a task"
-  out=$(run_spawn "$home" "$fakebin" forge-origin-s2 "$proj" claude --mode direct-PR --yolo off 2>&1)
-  assert_not_contains "$out" "forge mismatch" "an agreeing origin brief and registry were reported as drift"
-  assert_not_contains "$out" "--yolo on is refused" "yolo off on an origin project was refused"
+  assert_not_contains "$out" "--yolo on is refused" "yolo was refused on origin, where only gerrit and external deactivate it"
 
   sendroot="$TMP_ROOT/forge-origin/sendroot"
   mkdir -p "$sendroot/bin"
@@ -1915,13 +1909,8 @@ STUB
   FM_HOME="$home" "$BRIEF" "$id" proj --scout >/dev/null 2>&1 \
     || fail "scout brief generation should succeed"
   fill_brief_subsections "$home/data/$id/brief.md" "Fix what the investigation found." "Carry over only the fix."
-  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo on 2>&1)
-  status=$?
-  [ "$status" -ne 0 ] || fail "promotion kept yolo on an origin project"
-  assert_contains "$out" "--yolo on is refused for forge=origin" "the promotion refusal did not name the origin forge"
-  grep -qx 'kind=scout' "$meta" || fail "a refused origin promotion changed the scout record"
-  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo off 2>&1) \
-    || fail "promotion should take the origin binding with yolo off: $out"
+  out=$(FM_HOME="$home" FM_STATE_OVERRIDE="$home/state" "$PROMOTE" "$id" --mode direct-PR --yolo on 2>&1) \
+    || fail "promotion should take the origin binding and keep yolo: $out"
   payload="$TMP_ROOT/forge-origin/payload"
   ( cd "$sendroot" \
     && FM_TEST_CAPTURE="$payload" \
@@ -1932,7 +1921,7 @@ STUB
   # shellcheck disable=SC2016 # Backticks are literal generated Markdown.
   assert_grep '`origin pr create --head fm/forge-origin-p1' "$payload" \
     "the promoted origin worker was not told to open the PR with origin pr create"
-  pass "forge=origin: spawn agreement and promotion carry the binding, name the origin CLI, and refuse yolo"
+  pass "forge=origin: spawn agreement and promotion carry the binding, name the origin CLI, and keep yolo"
 }
 
 # direct-PR composes with the forge: the mode still means "publish without the

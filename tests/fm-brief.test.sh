@@ -301,8 +301,8 @@ ROWS
 # --forge origin is the Cursor Origin value of the registered forge binding.
 # Both publishing modes name the origin CLI instead of gh-axi, open the PR with
 # `origin pr create`, read its URL back with `origin pr view --json url`, and
-# leave the merge to a person in Origin. A no-mistakes ship skips the pipeline's
-# pr and ci steps and waits on `origin pr checks` itself.
+# leave the merge to the configured merge authority. A no-mistakes ship skips
+# the pipeline's pr and ci steps and waits on `origin pr checks` itself.
 test_forge_origin_renders_the_origin_cli() {
   local home brief out rc
   home="$TMP_ROOT/forge-origin-home"
@@ -330,8 +330,8 @@ test_forge_origin_renders_the_origin_cli() {
   # shellcheck disable=SC2016 # Backticks are literal generated brief text.
   assert_grep 'append `done [at=<epoch>]: PR {url}` to the status file' "$brief" \
     "a direct-PR --forge origin DOD must report the PR URL"
-  assert_grep 'A person merges the PR in Origin' "$brief" \
-    "a direct-PR --forge origin DOD must leave the merge to a person in Origin"
+  assert_grep 'The configured merge authority decides whether to merge the PR' "$brief" \
+    "a direct-PR --forge origin DOD must leave the merge to the configured merge authority"
   assert_no_grep 'gh-axi pr' "$brief" \
     "a direct-PR --forge origin DOD must not send the worker to gh-axi"
 

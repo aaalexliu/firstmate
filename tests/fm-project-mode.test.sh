@@ -5,7 +5,7 @@
 # tests/fm-task-delivery.test.sh; this file covers only what forgejo, origin, and
 # external add: forgejo binds in any token order, keeps +yolo (unlike gerrit),
 # and is refused on local-only like every forge; origin binds no-mistakes and
-# direct-PR, reports yolo=off with a refusal, and is refused on local-only;
+# direct-PR, keeps +yolo like forgejo, and is refused on local-only;
 # external binds, reports
 # yolo=off with a refusal like gerrit, and is refused on local-only; and the
 # plain (no --forge/--raw) output stays exactly two words, because tests/fm-secondmate-safety.test.sh and
@@ -36,7 +36,7 @@ cat > "$DATA/projects.md" <<'EOF'
 - near-miss [direct-PR forg=external] - a near miss of the forge key (added 2026-01-01)
 - cursor [no-mistakes forge=origin] - a Cursor Origin project (added 2026-01-01)
 - cursor-direct [forge=origin direct-PR] - forge token first, order must not matter (added 2026-01-01)
-- cursor-yolo [direct-PR +yolo forge=origin] - +yolo cannot apply while Origin is watch-only (added 2026-01-01)
+- cursor-yolo [direct-PR +yolo forge=origin] - +yolo applies through the guarded Origin merge (added 2026-01-01)
 - cursor-local [local-only forge=origin] - an Origin forge on a mode that publishes nothing (added 2026-01-01)
 - cursor-hand [no-mistakes forge=origin pr=manual] - pr=manual beside a forge (added 2026-01-01)
 - hand [no-mistakes pr=manual] - the worker writes the PR text (added 2026-01-01)
@@ -106,9 +106,9 @@ err=$(FM_DATA_OVERRIDE="$DATA" "$PROJECT_MODE" cursor 2>&1 >/dev/null)
 [ -z "$err" ] || fail "a registered forge=origin warned: $err"
 [ "$(run_forge cursor-direct)" = "origin" ] || fail "forge=origin placed before the mode token did not resolve: $(run_forge cursor-direct)"
 [ "$(run_mode cursor-direct)" = "direct-PR off" ] || fail "forge=origin first displaced the direct-PR mode: $(run_mode cursor-direct)"
-[ "$(run_mode cursor-yolo)" = "direct-PR off" ] || fail "+yolo on forge=origin must report yolo=off: $(run_mode cursor-yolo)"
+[ "$(run_mode cursor-yolo)" = "direct-PR on" ] || fail "forge=origin must keep +yolo, which only gerrit and external deactivate: $(run_mode cursor-yolo)"
 err=$(FM_DATA_OVERRIDE="$DATA" "$PROJECT_MODE" cursor-yolo 2>&1 >/dev/null)
-assert_contains "$err" "yolo is inactive for forge=origin" "+yolo on forge=origin was dropped without a refusal"
+[ -z "$err" ] || fail "+yolo on forge=origin warned: $err"
 for flag in "" --forge; do
   # shellcheck disable=SC2086 # An empty flag must expand to nothing.
   out=$(FM_DATA_OVERRIDE="$DATA" "$PROJECT_MODE" $flag cursor-local 2>/dev/null)
@@ -121,7 +121,7 @@ status=$?
 [ "$status" -eq 3 ] && [ -z "$out" ] || fail "pr=manual beside forge=origin did not refuse (status $status, got '$out')"
 err=$(FM_DATA_OVERRIDE="$DATA" "$PROJECT_MODE" near-miss 2>&1 >/dev/null)
 assert_contains "$err" "forge=origin" "the near-miss warning does not list forge=origin"
-pass "fm-project-mode: forge=origin binds no-mistakes and direct-PR, reports yolo=off with a refusal, and is refused on local-only and beside pr=manual"
+pass "fm-project-mode: forge=origin binds no-mistakes and direct-PR, keeps +yolo, and is refused on local-only and beside pr=manual"
 
 [ "$(run_forge reviewed)" = "external" ] || fail "forge=external did not resolve: $(run_forge reviewed)"
 [ "$(run_mode reviewed)" = "direct-PR off" ] || fail "forge=external changed the two-word output: $(run_mode reviewed)"

@@ -8,15 +8,18 @@
 # request is addressed through glab by the project URL rebuilt from the parsed
 # host and path, so any instance works and no host is hardcoded; a Forgejo
 # pull request is addressed through tea by the derived owner and repository
-# plus a "tea login" resolved fresh from the parsed host on every run. A Gerrit
+# plus a "tea login" resolved fresh from the parsed host on every run; a Cursor
+# Origin pull request is addressed through the origin CLI by the derived
+# org/repository. A Gerrit
 # change is refused outright: that adapter is read-only, and the refusal at the
-# parse below owns why. A Cursor Origin pull request is refused too, because
-# Origin support is watch-only for now and a person merges it in Origin.
+# parse below owns why.
 #
 # Merge method on GitHub defaults to --squash when the caller passes none of
 # --squash, --merge, --rebase, or --method after the optional -- separator.
 # On Forgejo the merge style defaults to the repository's own
 # default_merge_style, read live, and a merge is refused when it cannot be read.
+# On Origin the method defaults to squash, and "origin pr merge" itself
+# refuses a method the repository disallows.
 # A GitHub merge is refused unless every pre-merge condition holds, each read
 # live at merge time rather than taken from recorded metadata: the pull request
 # is open, not a draft, mergeable, free of conflicts, every unwaived check
@@ -104,7 +107,7 @@
 # canceled, or stale pipeline still refuses, every other condition still
 # holds, and a project that requires a pipeline to succeed still refuses
 # through detailed_merge_status. It is refused while the away-posture record
-# exists and on any forge other than GitLab. The verified head is then passed
+# exists and on any forge other than GitLab and Origin. The verified head is then passed
 # to glab as --sha, so a push that lands between that read and the merge fails
 # the merge instead of landing commits nothing verified. A recorded pr_head that disagrees with the live head is
 # reported rather than trusted, because a rebase moves the head and leaves the
@@ -138,7 +141,39 @@
 # because there is no established translation from a gh/glab-style flag into
 # a Forgejo API field yet.
 #
-# Before either forge merge, the task's existing per-task control lock
+# A Cursor Origin merge is refused unless every pre-merge condition holds, each
+# read from one live "origin pr view --json" at merge time: the pull request is
+# the URL being merged, its status is open and isDraft is false, its head is
+# the pr_head recorded for the task (the re-recording below keeps it, so only
+# a fresh registration from a done report moves it, and a retry still refuses
+# a moved head), it
+# has no stack parent (parentChangeId), its mergeability reads mergeable true,
+# hasMergeConflicts false, mergeConflictState MERGE_CONFLICT_STATE_CLEAN (a
+# pending conflict check is not a clean answer, and an absent state refuses),
+# and was evaluated at the current head, and at least one check has reported
+# while every unwaived check run in ciState ran at the current head and
+# completed with success, neutral, or skipped (the set origin's own "pr checks"
+# exit status passes). A stack parent refuses because merging a stacked pull
+# request lands every open pull request from the stack root through it in one
+# commit. Every failing condition is reported, not just the first. An attended
+# --allow-red <check-name> waives only check runs with that exact name, failing
+# or still running, exactly as on GitHub; --allow-missing does not apply,
+# because a required check that has not reported blocks Origin's own
+# mergeability verdict, which nothing here waives. An attended
+# --allow-no-pipeline, for a repository that deliberately runs no checks,
+# waives only the no-check condition and only when ciState holds no check run
+# at all, the way it waives GitLab's null head pipeline. The verified head is then
+# passed to "origin pr merge" as --match-head-commit. Only a successful merge
+# command followed by a read-back of status merged, a mergeCommitSha that is a
+# commit hash, and a mergedAt time counts as landed; the merge commit is then
+# printed as the verified proof, and anything less is refused non-zero. Extra
+# arguments may only name a merge method (--squash, --merge, or --method
+# squash|merge); Origin has no rebase merge, and auto-merge, rule bypass,
+# stack, and commit-message flags are refused. Reading and merging both need
+# origin and jq, and either one absent stops the merge before any state is
+# recorded.
+#
+# Before any forge merge, the task's existing per-task control lock
 # serializes the captain-hold check through the forge command. A still-held or
 # unreadable row refuses before that command, so a captain approval must be
 # recorded as an `answer --release` before this entrypoint is invoked. While
@@ -242,13 +277,6 @@ if [ "$PROVIDER" = gerrit ]; then
   echo "error: firstmate does not submit a Gerrit change: submitting requires an attributed human approval it must not manufacture, so a human submits the change on the server" >&2
   exit 2
 fi
-# Origin support is watch-only for now: firstmate registers and watches an
-# Origin pull request and proves it landed at cleanup, but has no guarded merge
-# for one yet, so the refusal comes before anything is recorded.
-if [ "$PROVIDER" = origin ]; then
-  echo "error: firstmate does not merge Cursor Origin pull requests yet: Origin PRs are merged in Origin for now, by a person, and the registered merge watch reports the merge" >&2
-  exit 2
-fi
 shift 2
 ATTENDED_OVERRIDE=false
 ALLOW_NO_PIPELINE=false
@@ -296,8 +324,8 @@ while [ "$#" -gt 0 ]; do
     *) break ;;
   esac
 done
-# --allow-red names one check run to waive, which only GitHub's per-check
-# reading can match. GitLab and Forgejo each collapse their checks into a
+# --allow-red names one check run to waive, which only GitHub's and Origin's
+# per-check readings can match. GitLab and Forgejo each collapse their checks into a
 # single head verdict - a head pipeline status and a combined commit status -
 # so there is no per-check name to waive there; GitLab's only waiver is the
 # whole-pipeline absence --allow-no-pipeline covers. Refuse the combination
@@ -315,11 +343,12 @@ if [ "${#ALLOW_RED[@]}" -gt 0 ]; then
       ;;
   esac
 fi
-# --allow-no-pipeline waives only GitLab's own reading of a merge request that
-# has no head pipeline at all. GitHub's per-check waivers and Forgejo's
-# combined status have no such state to waive, so it is refused there too.
-if [ "$ALLOW_NO_PIPELINE" = true ] && [ "$PROVIDER" != gitlab ]; then
-  echo "error: --allow-no-pipeline applies only to GitLab, where it waives a merge request that has no head pipeline at all" >&2
+# --allow-no-pipeline waives only a reading of no CI at all: GitLab's merge
+# request with no head pipeline, and Origin's pull request with no check run.
+# GitHub's per-check waivers and Forgejo's combined status have no such state
+# to waive, so it is refused there.
+if [ "$ALLOW_NO_PIPELINE" = true ] && [ "$PROVIDER" != gitlab ] && [ "$PROVIDER" != origin ]; then
+  echo "error: --allow-no-pipeline applies only to GitLab and Cursor Origin, where it waives a merge request with no head pipeline or a pull request with no check at all" >&2
   exit 2
 fi
 if [ "${#ALLOW_MISSING[@]}" -gt 0 ]; then
@@ -330,6 +359,10 @@ if [ "${#ALLOW_MISSING[@]}" -gt 0 ]; then
       ;;
     forgejo)
       echo "error: --allow-missing does not apply to Forgejo, where a merge already requires the head's combined commit status to have succeeded" >&2
+      exit 2
+      ;;
+    origin)
+      echo "error: --allow-missing does not apply to Cursor Origin, where a required check that has not reported blocks Origin's own mergeability verdict, which no flag here waives" >&2
       exit 2
       ;;
   esac
@@ -556,11 +589,22 @@ if [ "$PROVIDER" = forgejo ]; then
     exit 1
   }
 fi
+ORIGIN_MISSING=
+if [ "$PROVIDER" = origin ]; then
+  command -v origin >/dev/null 2>&1 || ORIGIN_MISSING="origin"
+  if ! command -v jq >/dev/null 2>&1; then
+    ORIGIN_MISSING="${ORIGIN_MISSING:+$ORIGIN_MISSING and }jq"
+  fi
+  if [ -n "$ORIGIN_MISSING" ]; then
+    echo "error: merging a Cursor Origin pull request requires $ORIGIN_MISSING on PATH" >&2
+    exit 1
+  fi
+fi
 
 # The recorded head is read before bin/fm-pr-check.sh rewrites the metadata,
 # because that script re-records pr= and drops a pr_head= it cannot resolve.
 RECORDED_HEAD=
-if [ "$PROVIDER" = gitlab ] || [ "$PROVIDER" = forgejo ]; then
+if [ "$PROVIDER" = gitlab ] || [ "$PROVIDER" = forgejo ] || [ "$PROVIDER" = origin ]; then
   RECORDED_HEAD=$(grep '^pr_head=' "$META" | tail -1 | cut -d= -f2- || true)
 fi
 
@@ -855,6 +899,271 @@ forgejo_default_merge_style() {
       return 1
       ;;
   esac
+}
+
+# The caller's own extra arguments may only name an Origin merge method, in the
+# forms caller_merge_method reads. Origin has no rebase merge, and auto-merge,
+# rule bypass, stack, and commit-message flags have no reviewed path here yet,
+# so anything else is refused rather than passed through to "origin pr merge".
+origin_reject_unsupported_args() {
+  local arg pending=false
+  for arg in "$@"; do
+    if [ "$pending" = true ]; then
+      pending=false
+      continue
+    fi
+    case "$arg" in
+      --squash|--merge) ;;
+      --method) pending=true ;;
+      --method=*) ;;
+      --rebase)
+        echo "error: Cursor Origin has no rebase merge; name --squash or --merge" >&2
+        return 1
+        ;;
+      *)
+        echo "error: extra merge arguments other than a merge method are not supported for Cursor Origin merges" >&2
+        return 1
+        ;;
+    esac
+  done
+}
+
+# The Origin merge method: the caller's own, or squash (the GitHub default)
+# when the caller names none. "origin pr merge" itself refuses a method the
+# repository disallows.
+origin_merge_method() {
+  local method
+  method=$(caller_merge_method "$@")
+  case "$method" in
+    '') method=squash ;;
+    squash|merge) ;;
+    *)
+      echo "error: refusing to merge $URL: Cursor Origin merges only with --squash or --merge, not \"$method\"" >&2
+      return 1
+      ;;
+  esac
+  printf '%s' "$method"
+}
+
+# Pre-merge conditions for a Cursor Origin pull request, read from one live
+# "origin pr view --json" of it; the header owns what each condition means.
+# Sets FM_PR_MERGE_HEAD to the verified head on success and returns non-zero
+# after reporting every condition that failed. A merge without --auto lands
+# immediately on Origin, so like Forgejo this sets no async/queued signal.
+# Shares FM_PR_MERGE_HEAD, declared above.
+origin_verify_mergeable() {
+  local json fields checks line waive='' red='' checks_waived=false
+  local total=0 named=0 refusals='' count=''
+  local url_field='' status='' draft='' live_head='' parent='' mergeable=''
+  local conflicts='' conflict_state='' evaluated_head='' blockers=''
+
+  if ! json=$(origin pr view "$PR_NUMBER" -R "$PR_OWNER/$PR_REPO" \
+      --json url,status,isDraft,headSha,parentChangeId,mergeability,ciState 2>/dev/null) \
+    || [ -z "$json" ]; then
+    echo "error: could not read the Cursor Origin pull request state before merging" >&2
+    return 1
+  fi
+  # One named field per line, as in gitlab_verify_mergeable: an absent or null
+  # field becomes an empty string or "null", which no check below accepts, and
+  # a value carrying a newline fails the exact line count.
+  if ! fields=$(printf '%s' "$json" | jq -r '
+      if type == "object" and ((.mergeability // {}) | type) == "object" then
+        "url=" + ((.url // "") | tostring),
+        "status=" + ((.status // "") | tostring),
+        "draft=" + (.isDraft | tostring),
+        "head=" + ((.headSha // "") | tostring),
+        "parent=" + ((.parentChangeId // "") | tostring),
+        "mergeable=" + (.mergeability.mergeable | tostring),
+        "conflicts=" + (.mergeability.hasMergeConflicts | tostring),
+        "conflict_state=" + ((.mergeability.mergeConflictState // "") | tostring),
+        "evaluated_head=" + ((.mergeability.evaluatedHeadSha // "") | tostring),
+        "blockers=" + ([(.mergeability.mergeability.blockers // [])[]? | .kind? // empty | tostring] | join(","))
+      else
+        error("pull request payload is not an object")
+      end' 2>/dev/null); then
+    echo "error: could not read the Cursor Origin pull request state before merging" >&2
+    return 1
+  fi
+  while IFS= read -r line; do
+    total=$((total + 1))
+    case "$line" in
+      url=*) url_field=${line#url=} ;;
+      status=*) status=${line#status=} ;;
+      draft=*) draft=${line#draft=} ;;
+      head=*) live_head=${line#head=} ;;
+      parent=*) parent=${line#parent=} ;;
+      mergeable=*) mergeable=${line#mergeable=} ;;
+      conflicts=*) conflicts=${line#conflicts=} ;;
+      conflict_state=*) conflict_state=${line#conflict_state=} ;;
+      evaluated_head=*) evaluated_head=${line#evaluated_head=} ;;
+      blockers=*) blockers=${line#blockers=} ;;
+      *) continue ;;
+    esac
+    named=$((named + 1))
+  done <<FIELDS
+$fields
+FIELDS
+  if [ "$named" -ne 10 ] || [ "$total" -ne 10 ]; then
+    echo "error: could not read the Cursor Origin pull request state before merging" >&2
+    return 1
+  fi
+  if ! fm_pr_head_valid "$live_head"; then
+    echo "error: could not read the Cursor Origin pull request head commit before merging" >&2
+    return 1
+  fi
+
+  # Every check run across every group, judged at the live head. Names and
+  # reported values are JSON-quoted, so no check can forge a refusal line.
+  [ "${#ALLOW_RED[@]}" -eq 0 ] || waive=${ALLOW_RED[0]}
+  if ! checks=$(printf '%s' "$json" | jq -r --arg head "$live_head" --arg waive "$waive" '
+      def passing: . == "success" or . == "neutral" or . == "skipped";
+      if (.ciState.checkRunGroups | type) != "array" then error("no check run groups") else . end
+      | [ .ciState.checkRunGroups[]
+          | if (.checkRuns | type) == "array" then .checkRuns[] else error("invalid check run group") end
+          | if type == "object" then . else error("invalid check run") end ] as $runs
+      | "count=" + ($runs | length | tostring),
+        ( $runs[]
+          | select($waive == "" or .name != $waive)
+          | (.name | tojson) as $name
+          | if .headSha != $head then
+              "red=check \($name) ran at \(.headSha | tojson), not at the current head \($head)"
+            elif .status != "completed" or .conclusion == null then
+              "red=check \($name) is \(.status | tojson), not completed"
+            elif (.conclusion | passing) | not then
+              "red=check \($name) concluded \(.conclusion | tojson), not success"
+            else empty end )' 2>/dev/null); then
+    echo "error: could not read the Cursor Origin pull request checks before merging" >&2
+    return 1
+  fi
+  while IFS= read -r line; do
+    case "$line" in
+      count=*) count=${line#count=} ;;
+      red=*) red="$red  - ${line#red=}
+" ;;
+    esac
+  done <<CHECKS
+$checks
+CHECKS
+
+  [ "$url_field" = "$URL" ] \
+    || refusals="$refusals  - Origin reports the pull request at \"${url_field:-unreadable}\", not $URL
+"
+  [ "$status" = open ] \
+    || refusals="$refusals  - status is \"${status:-unreadable}\", not open
+"
+  case "$draft" in
+    false) ;;
+    true) refusals="$refusals  - the pull request is a draft
+" ;;
+    *) refusals="$refusals  - isDraft is \"${draft:-unreadable}\", not false
+" ;;
+  esac
+  # The recorded head is the reviewed one: a push after registration is new,
+  # unreviewed content, so it refuses rather than being merged as a notice.
+  if [ -z "$RECORDED_HEAD" ]; then
+    refusals="$refusals  - no head was recorded for this pull request before this run, so the live head $live_head cannot be confirmed
+"
+  elif [ "$RECORDED_HEAD" != "$live_head" ]; then
+    refusals="$refusals  - the live head $live_head is not the recorded head $RECORDED_HEAD; the moved head must be reviewed and re-reported done, which registers it, before it can merge
+"
+  fi
+  [ -z "$parent" ] \
+    || refusals="$refusals  - the pull request is stacked on parent change $parent; merging it would land every open pull request from the stack root through it in one commit
+"
+  if [ "$mergeable" != true ]; then
+    refusals="$refusals  - mergeable is \"${mergeable:-unreadable}\", not true${blockers:+ (blockers: $blockers)}
+"
+  fi
+  [ "$conflicts" = false ] \
+    || refusals="$refusals  - hasMergeConflicts is \"${conflicts:-unreadable}\", not false
+"
+  case "$conflict_state" in
+    MERGE_CONFLICT_STATE_CLEAN) ;;
+    MERGE_CONFLICT_STATE_PENDING)
+      refusals="$refusals  - mergeConflictState is MERGE_CONFLICT_STATE_PENDING: Origin is still checking for conflicts, which is not a clean answer
+"
+      ;;
+    *)
+      refusals="$refusals  - mergeConflictState is \"${conflict_state:-absent}\", not MERGE_CONFLICT_STATE_CLEAN
+"
+      ;;
+  esac
+  [ "$evaluated_head" = "$live_head" ] \
+    || refusals="$refusals  - mergeability was evaluated at \"${evaluated_head:-unknown}\", not at the current head $live_head
+"
+  # No check at all is not a pass, as origin's own "pr checks" exit status
+  # agrees; only the attended --allow-no-pipeline waives that one state.
+  if [ "$count" = 0 ]; then
+    if [ "$ALLOW_NO_PIPELINE" = true ]; then
+      checks_waived=true
+    else
+      refusals="$refusals  - no check has reported at head $live_head
+"
+    fi
+  fi
+  refusals="$refusals$red"
+
+  if [ -n "$refusals" ]; then
+    printf 'error: refusing to merge %s\n' "$URL" >&2
+    printf '%s' "$refusals" >&2
+    return 1
+  fi
+  if [ "$checks_waived" = true ]; then
+    printf 'verified: %s is open and mergeable at the recorded head %s, with no checks, waived by --allow-no-pipeline\n' \
+      "$URL" "$live_head" >&2
+  else
+    printf 'verified: %s is open and mergeable, with every unwaived check green at the recorded head %s\n' \
+      "$URL" "$live_head" >&2
+  fi
+  FM_PR_MERGE_HEAD=$live_head
+}
+
+# Read an Origin pull request back after "origin pr merge" returned success.
+# Returns 0 only for status merged with a commit-hash mergeCommitSha and a
+# mergedAt time, setting FM_PR_ORIGIN_MERGE_COMMIT and FM_PR_ORIGIN_MERGED_AT;
+# 1 for any other readable status, which is a definite not-merged answer; and 2
+# for an unreadable record or a merged one still missing its proof, which the
+# caller re-reads a bounded number of times.
+FM_PR_ORIGIN_STATUS=
+FM_PR_ORIGIN_MERGE_COMMIT=
+FM_PR_ORIGIN_MERGED_AT=
+origin_confirm_merged() {
+  local json fields line total=0 named=0 status='' commit='' merged_at=''
+  FM_PR_ORIGIN_STATUS=
+  FM_PR_ORIGIN_MERGE_COMMIT=
+  FM_PR_ORIGIN_MERGED_AT=
+  if ! json=$(origin pr view "$PR_NUMBER" -R "$PR_OWNER/$PR_REPO" \
+      --json status,mergeCommitSha,mergedAt 2>/dev/null) || [ -z "$json" ]; then
+    return 2
+  fi
+  if ! fields=$(printf '%s' "$json" | jq -r '
+      if type == "object" and (.status | type) == "string" then
+        "status=" + .status,
+        "commit=" + ((.mergeCommitSha // "") | tostring),
+        "merged_at=" + ((.mergedAt // "") | tostring)
+      else
+        error("invalid pull request record")
+      end' 2>/dev/null); then
+    return 2
+  fi
+  while IFS= read -r line; do
+    total=$((total + 1))
+    case "$line" in
+      status=*) status=${line#status=} ;;
+      commit=*) commit=${line#commit=} ;;
+      merged_at=*) merged_at=${line#merged_at=} ;;
+      *) continue ;;
+    esac
+    named=$((named + 1))
+  done <<FIELDS
+$fields
+FIELDS
+  [ "$named" -eq 3 ] && [ "$total" -eq 3 ] && [ -n "$status" ] || return 2
+  FM_PR_ORIGIN_STATUS=$status
+  [ "$status" = merged ] || return 1
+  fm_pr_head_valid "$commit" && [ -n "$merged_at" ] || return 2
+  FM_PR_ORIGIN_MERGE_COMMIT=$commit
+  FM_PR_ORIGIN_MERGED_AT=$merged_at
 }
 
 # Every GitHub check that is not green in the given live pull-request JSON, one
@@ -1447,7 +1756,7 @@ require_current_away_authority() {
     return 2
   fi
   if [ "$FM_PR_AWAY_POSTURE" = true ] && [ "$ALLOW_NO_PIPELINE" = true ]; then
-    echo "error: --allow-no-pipeline is attended-only; while the away-posture record exists a GitLab merge requires a successful head pipeline" >&2
+    echo "error: --allow-no-pipeline is attended-only; while the away-posture record exists a GitLab merge requires a successful head pipeline and a Cursor Origin merge requires green checks" >&2
     return 2
   fi
 }
@@ -1834,6 +2143,61 @@ case "$PROVIDER" in
     fm_afk_contract_lock_release || true
     fm_lock_release "$MERGE_CONTROL_LOCK" || true
     MERGE_CONTROL_LOCK=
+    ;;
+  origin)
+    origin_reject_unsupported_args "$@" || exit 1
+    origin_method=$(origin_merge_method "$@") || exit 1
+    origin_verify_mergeable || exit 1
+    # The away record is locked first, so this last presence and authority
+    # read and the forge command below share one live-owner critical section.
+    hold_away_record_for_merge || exit 1
+    away_status=0
+    require_current_away_authority || away_status=$?
+    [ "$away_status" -eq 0 ] || exit "$away_status"
+    # --match-head-commit binds the merge to the head this run verified, so a
+    # push that lands in between is refused by Origin instead of merged
+    # unverified. Without --auto, Origin merges now or refuses.
+    merge_status=0
+    merge_output=$(origin pr merge "$PR_NUMBER" -R "$PR_OWNER/$PR_REPO" \
+      "--$origin_method" --match-head-commit "$FM_PR_MERGE_HEAD" 2>&1) || merge_status=$?
+    if [ "$merge_status" -ne 0 ]; then
+      fm_afk_contract_lock_release || true
+      fm_lock_release "$MERGE_CONTROL_LOCK" || true
+      MERGE_CONTROL_LOCK=
+      [ -z "$merge_output" ] || printf '%s\n' "$merge_output" >&2
+      echo "error: the Cursor Origin merge command for $URL failed; no merge is recorded as landed" >&2
+      exit "$merge_status"
+    fi
+    persist_accepted_merge_authority || exit 1
+    fm_afk_contract_lock_release || true
+    fm_lock_release "$MERGE_CONTROL_LOCK" || true
+    MERGE_CONTROL_LOCK=
+    # Only a read-back proves the merge landed. An unreadable read, or a
+    # merged status still missing its merge commit or time, is re-read a
+    # bounded number of times; a definite other status stops at once.
+    origin_confirm_attempt=1
+    while :; do
+      origin_confirm_rc=0
+      origin_confirm_merged || origin_confirm_rc=$?
+      [ "$origin_confirm_rc" -eq 2 ] && [ "$origin_confirm_attempt" -lt 5 ] || break
+      sleep 1
+      origin_confirm_attempt=$((origin_confirm_attempt + 1))
+    done
+    if [ "$origin_confirm_rc" -ne 0 ]; then
+      if [ -n "$merge_output" ]; then
+        echo "error: the merge command's own output follows, quoted; it is the forge CLI's report, not this script's verdict:" >&2
+        while IFS= read -r line; do
+          printf 'error: > %s\n' "$line" >&2
+        done <<OUTPUT
+$merge_output
+OUTPUT
+      fi
+      printf 'error: Cursor Origin did not prove %s merged (status=%s); the merge poll remains armed and no landed outcome is recorded\n' \
+        "$URL" "${FM_PR_ORIGIN_STATUS:-unreadable}" >&2
+      exit 1
+    fi
+    printf 'verified: %s is merged as commit %s at %s\n' \
+      "$URL" "$FM_PR_ORIGIN_MERGE_COMMIT" "$FM_PR_ORIGIN_MERGED_AT"
     ;;
   *)
     echo "error: invalid PR merge request" >&2

@@ -32,7 +32,7 @@
 #   - <name> [<mode> +yolo branch=<prefix>] - <desc> (added <date>)  -> <mode> <yolo> <prefix>
 #   - <name> [<mode> forge=gerrit] - <desc> (added <date>)           -> <mode> off, --forge gerrit
 #   - <name> [<mode> forge=forgejo] - <desc> (added <date>)          -> <mode> <yolo>, --forge forgejo
-#   - <name> [<mode> forge=origin] - <desc> (added <date>)           -> <mode> off, --forge origin
+#   - <name> [<mode> forge=origin] - <desc> (added <date>)           -> <mode> <yolo>, --forge origin
 #   - <name> [direct-PR forge=external] - <desc> (added <date>)      -> direct-PR off, --forge external
 #   - <name> [no-mistakes pr=manual] - <desc> (added <date>)         -> no-mistakes off, --pr manual
 #   <name> may contain spaces; it ends at the literal " [" or " - " that follows it.
@@ -66,9 +66,9 @@
 #   publishes a change with gerrit-axi instead, and `forgejo` means a Forgejo or
 #   Gitea server, whose pull requests the worker handles with tea rather than
 #   gh-axi, `origin` means Cursor Origin, whose pull requests the worker opens
-#   with the origin CLI rather than gh-axi and a person merges in Origin, and
-#   `external` means the project's reviews are created by a review
-#   tool that uploads its own snapshot of the worker's local commits: the
+#   with the origin CLI rather than gh-axi, and `external` means the
+#   project's reviews are created by a review tool that uploads its own
+#   snapshot of the worker's local commits: the
 #   worker never needs to push a branch, and must never push a task branch to
 #   the project's shared origin. Firstmate cannot observe, approve, or merge
 #   such a review, so that rail always escalates (bin/fm-dod-lib.sh owns what
@@ -108,10 +108,7 @@
 # positive attributed claim that a named human approved, read by colleagues and
 # by any audit, and firstmate must not manufacture one. A registered
 # `forge=external` project reports yolo=off the same way, because firstmate can
-# neither observe nor perform the review tool's approval or merge. A registered
-# `forge=origin` project reports yolo=off the same way for now, because
-# firstmate has no guarded merge for an Origin pull request yet: a person
-# merges it in Origin and firstmate only watches it.
+# neither observe nor perform the review tool's approval or merge.
 #
 # --raw prints the registered mode annotation unmapped, so a caller that must
 # tell a conditional policy apart from a flat mode sees "no-mistakes-prod-only"
@@ -312,10 +309,6 @@ if [ "$forge" = gerrit ] && [ "$yolo" = on ]; then
 fi
 if [ "$forge" = external ] && [ "$yolo" = on ]; then
   echo "refused: +yolo is registered for $NAME but yolo is inactive for forge=external, so this reports yolo=off: firstmate can neither observe nor perform the review tool's approval or merge, so every review escalates" >&2
-  yolo=off
-fi
-if [ "$forge" = origin ] && [ "$yolo" = on ]; then
-  echo "refused: +yolo is registered for $NAME but yolo is inactive for forge=origin, so this reports yolo=off: firstmate cannot merge a Cursor Origin pull request yet, so a person merges it in Origin" >&2
   yolo=off
 fi
 # A conditional policy is not a task mode. Mechanical callers get its most

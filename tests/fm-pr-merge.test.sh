@@ -37,6 +37,16 @@ FJ_URL="https://$FJ_HOST/$FJ_OWNER/$FJ_REPO/pulls/9"
 FJ_HEAD=cccccccccccccccccccccccccccccccccccccccc
 FJ_STALE_HEAD=dddddddddddddddddddddddddddddddddddddddd
 
+# The Cursor Origin fixture. Pull request pages live on cursor.com/codebase,
+# never on the origin.cursor.com git host, under exactly org/repository.
+OG_ORG=fixture-org
+OG_REPO=fixture-repo
+OG_URL="https://cursor.com/codebase/$OG_ORG/$OG_REPO/pull/5"
+OG_HEAD=1111111111111111111111111111111111111111
+OG_STALE_HEAD=2222222222222222222222222222222222222222
+OG_MERGE_COMMIT=3333333333333333333333333333333333333333
+OG_MERGED_AT=2026-10-29T22:30:00Z
+
 JQ_BIN=$(command -v jq) || fail "these tests read glab's JSON with the real jq, which was not found"
 REAL_MV=$(command -v mv) || fail "these tests need mv to simulate a failed poll publish"
 
@@ -610,6 +620,166 @@ make_forgejo_case() {
   printf '%s\n' "$case_dir"
 }
 
+# origin mock recording every invocation. Any "pr view" other than the
+# post-merge read, the registration read and the pre-merge read alike, answers
+# with exactly the requested fields of origin-pr.json, as the live CLI does, or
+# with the file unchanged when it is not a JSON object; the post-merge read of
+# status,mergeCommitSha,mergedAt answers from origin-pr-post.json once a merge
+# has landed and as a still-open pull request before that, after failing the
+# number of times origin-post-merge-view-failures holds. "pr merge" is the one
+# path that can land a merge: it fails on origin-merge-fails, a
+# --match-head-commit other than origin-expected-head, or the method
+# origin-disallowed-method names, and on origin-merge-noop it exits 0 without
+# landing anything, the unproved outcome.
+add_origin_mock() {
+  local case_dir=$1
+  cat > "$case_dir/fakebin/origin" <<'SH'
+#!/usr/bin/env bash
+set -u
+log_dir=$(dirname "$FM_TEST_ORIGIN_LOG")
+printf '%s\n' "$*" >> "$FM_TEST_ORIGIN_LOG"
+sub="${1:-} ${2:-}"
+shift 2 || exit 1
+json= head= method=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) json=$2; shift 2 ;;
+    --match-head-commit) head=$2; shift 2 ;;
+    --squash|--merge) method=${1#--}; shift ;;
+    *) shift ;;
+  esac
+done
+case "$sub" in
+  "pr view")
+    if [ "$json" = status,mergeCommitSha,mergedAt ]; then
+      if [ -s "$log_dir/origin-post-merge-view-failures" ]; then
+        left=$(cat "$log_dir/origin-post-merge-view-failures")
+        if [ "$left" -gt 0 ]; then
+          printf '%s\n' "$((left - 1))" > "$log_dir/origin-post-merge-view-failures"
+          exit 1
+        fi
+      fi
+      if [ -e "$log_dir/origin-merged" ]; then
+        cat "$log_dir/origin-pr-post.json"
+      else
+        printf '{"status":"open","mergeCommitSha":null,"mergedAt":null}\n'
+      fi
+    else
+      [ ! -e "$log_dir/origin-view-fails" ] || { echo 'Error: view failed' >&2; exit 1; }
+      jq -ce --arg fields "$json" 'select(type == "object")
+        | with_entries(select(.key as $k | ($fields | split(",") | index($k)) != null))' \
+        "$log_dir/origin-pr.json" 2>/dev/null || cat "$log_dir/origin-pr.json"
+    fi
+    ;;
+  "pr merge")
+    if [ -e "$log_dir/origin-merge-fails" ]; then
+      echo 'Error: Origin refused the merge' >&2
+      exit 1
+    fi
+    if [ -e "$log_dir/origin-expected-head" ] \
+      && [ "$head" != "$(cat "$log_dir/origin-expected-head")" ]; then
+      echo 'Error: the pull request head moved' >&2
+      exit 1
+    fi
+    if [ -e "$log_dir/origin-disallowed-method" ] \
+      && [ "$method" = "$(cat "$log_dir/origin-disallowed-method")" ]; then
+      echo "Error: $method merges are not allowed on this repository" >&2
+      exit 1
+    fi
+    printf '%s\n' "$method" > "$log_dir/origin-merge-method"
+    [ -e "$log_dir/origin-merge-noop" ] || : > "$log_dir/origin-merged"
+    echo 'Merged pull request'
+    ;;
+  *) exit 1 ;;
+esac
+exit 0
+SH
+  chmod +x "$case_dir/fakebin/origin"
+  ln -sf "$JQ_BIN" "$case_dir/fakebin/jq"
+}
+
+# write_origin_pr_json <file> [<field>=<value> ...]
+# A pull request view that satisfies every pre-merge condition by default, in
+# the shape the live origin CLI prints, with named fields overridden so one
+# case drives exactly one condition. parent and conflict_state are raw JSON.
+# checks is a space-separated list of name:status:conclusion[:headSha] check
+# runs, where a conclusion of - is omitted the way an unfinished run reports
+# it and an absent headSha is the pull request head; checks=none reports no
+# check run group at all, as an unconfigured repository does.
+write_origin_pr_json() {
+  local file=$1 kv key value spec name run_status conclusion run_head runs=''
+  local url=$OG_URL status=open draft=false head=$OG_HEAD parent=null
+  local mergeable=true conflicts=false conflict_state='"MERGE_CONFLICT_STATE_CLEAN"'
+  local evaluated_head=$OG_HEAD blockers='' checks='ci:completed:success' groups=''
+  shift
+  for kv in "$@"; do
+    key=${kv%%=*}
+    value=${kv#*=}
+    case "$key" in
+      url) url=$value ;;
+      status) status=$value ;;
+      draft) draft=$value ;;
+      head) head=$value ;;
+      parent) parent=$value ;;
+      mergeable) mergeable=$value ;;
+      conflicts) conflicts=$value ;;
+      conflict_state) conflict_state=$value ;;
+      evaluated_head) evaluated_head=$value ;;
+      blockers) blockers=$value ;;
+      checks) checks=$value ;;
+      *) fail "write_origin_pr_json: unknown field '$key'" ;;
+    esac
+  done
+  if [ "$checks" != none ]; then
+    for spec in $checks; do
+      IFS=: read -r name run_status conclusion run_head <<EOF
+$spec
+EOF
+      [ -n "$run_head" ] || run_head=$head
+      runs="${runs:+$runs,}{\"name\":\"$name\",\"status\":\"$run_status\",\"headSha\":\"$run_head\""
+      [ "$conclusion" = - ] || runs="$runs,\"conclusion\":\"$conclusion\""
+      runs="$runs}"
+    done
+    groups="{\"name\":\"CI\",\"checkRuns\":[$runs]}"
+  fi
+  [ -z "$blockers" ] || blockers="{\"kind\":\"$blockers\"}"
+  {
+    printf '{"number":5,"url":"%s","status":"%s","isDraft":%s,"headSha":"%s","headRef":"fm/task-x1","baseRef":"main",' \
+      "$url" "$status" "$draft" "$head"
+    printf '"mergeCommitSha":null,"mergedAt":null,"parentChangeId":%s,' "$parent"
+    printf '"mergeability":{"mergeable":%s,"hasMergeConflicts":%s,"mergeConflictState":%s,"evaluatedHeadSha":"%s",' \
+      "$mergeable" "$conflicts" "$conflict_state" "$evaluated_head"
+    printf '"mergeability":{"verdict":"%s","blockers":[%s]}},"ciState":{"checkRunGroups":[%s]}}\n' \
+      "$([ "$mergeable" = true ] && echo mergeable || echo blocked)" "$blockers" "$groups"
+  } > "$file"
+}
+
+# make_origin_case <name> [<pr-field>=<value> ...]: a case dir with the origin
+# mock, a pull request view, a merged read-back, and task metadata that already
+# records the pull request and its reviewed head, as registration leaves it.
+make_origin_case() {
+  local name=$1 case_dir
+  shift
+  case_dir=$(make_case "$name")
+  mkdir -p "$case_dir/wt"
+  add_gh_mocks "$case_dir" eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+  add_origin_mock "$case_dir"
+  : > "$case_dir/gh-axi.log"
+  : > "$case_dir/origin.log"
+  write_origin_pr_json "$case_dir/origin-pr.json" "$@"
+  printf '{"status":"merged","mergeCommitSha":"%s","mergedAt":"%s"}\n' \
+    "$OG_MERGE_COMMIT" "$OG_MERGED_AT" > "$case_dir/origin-pr-post.json"
+  printf '%s\n' "$OG_HEAD" > "$case_dir/origin-expected-head"
+  printf 'pr=%s\npr_head=%s\n' "$OG_URL" "$OG_HEAD" >> "$case_dir/state/task-x1.meta"
+  printf '%s\n' "$case_dir"
+}
+
+# The merge line origin was asked to run, so a test asserts one exact
+# invocation rather than a substring of the whole log.
+origin_merge_line() {
+  grep '^pr merge ' "$1" || true
+}
+
 # make_gitlab_case <name> [<field>=<value> ...]: a case dir with both forge
 # mocks and a merge request payload. Echoes the case dir.
 make_gitlab_case() {
@@ -691,6 +861,7 @@ run_pr_merge() {
   FM_TEST_GLAB_LOG="$case_dir/glab.log" \
   FM_TEST_GLAB_JSON="$case_dir/mr.json" \
   FM_TEST_TEA_LOG="$case_dir/tea.log" \
+  FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
   HOME="${FM_TEST_USER_HOME:-$case_dir/user-home}" \
   PATH="$case_dir/fakebin:$PATH" \
     "$PR_MERGE" "$@"
@@ -2579,6 +2750,482 @@ test_forgejo_merge_method_and_extra_args() {
   pass "fm-pr-merge maps --squash/--rebase to Forgejo's Do field, defaults to the repository's default merge style, and refuses any other extra argument"
 }
 
+# run_origin_refusal <case-dir> <label> <expected-rc> [<fm-pr-merge arg> ...]:
+# run a merge that must not reach "origin pr merge", and assert its exit code.
+run_origin_refusal() {
+  local case_dir=$1 label=$2 expected=$3 rc
+  shift 3
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" "$@" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  expect_code "$expected" "$rc" "$label: fm-pr-merge should refuse: $(cat "$case_dir/stderr")"
+  [ -z "$(origin_merge_line "$case_dir/origin.log")" ] \
+    || fail "$label: a merge was attempted despite the refusal"
+  assert_absent "$case_dir/origin-merged" "$label: the mock recorded a landed merge"
+  assert_absent "$case_dir/state/.wake-queue" "$label: a refused merge left a landed outcome"
+}
+
+test_origin_url_resolves_and_merges() {
+  local case_dir rc
+  case_dir=$(make_origin_case origin-merges)
+
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+
+  expect_code 0 "$rc" "origin-merges: a green Origin pull request should merge: $(cat "$case_dir/stderr")"
+  assert_grep "pr=$OG_URL" "$case_dir/state/task-x1.meta" \
+    "origin-merges: pr= was not recorded before merging"
+  assert_grep "pr view 5 -R $OG_ORG/$OG_REPO --json url,status,isDraft,headSha,parentChangeId,mergeability,ciState" \
+    "$case_dir/origin.log" "origin-merges: the pre-merge state was not read by number and org/repository"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-merges: unexpected merge invocation: '$(origin_merge_line "$case_dir/origin.log")'"
+  assert_grep "pr view 5 -R $OG_ORG/$OG_REPO --json status,mergeCommitSha,mergedAt" "$case_dir/origin.log" \
+    "origin-merges: the merge was not read back"
+  assert_grep "every unwaived check green at the recorded head $OG_HEAD" "$case_dir/stderr" \
+    "origin-merges: the verified head was not reported"
+  assert_grep "verified: $OG_URL is merged as commit $OG_MERGE_COMMIT at $OG_MERGED_AT" "$case_dir/stdout" \
+    "origin-merges: the merge commit was not reported as the proof"
+  [ "$(sed -n 6p "$case_dir/state/task-x1.merge-authority" 2>/dev/null || true)" = attended ] \
+    || fail "origin-merges: the merge authority was not persisted"
+  assert_grep "merge landed: task-x1 $OG_URL" "$case_dir/state/.wake-queue" \
+    "origin-merges: the confirmed merge left no durable outcome"
+  [ ! -s "$case_dir/gh-axi.log" ] || fail "origin-merges: a pull request reached the GitHub CLI"
+  [ ! -s "$case_dir/gh.log" ] || fail "origin-merges: a pull request reached gh"
+  pass "fm-pr-merge merges a green Cursor Origin pull request bound to its recorded head and reports the merge commit"
+}
+
+# A ready report registers the pull request through bin/fm-pr-check.sh, which
+# records the head Origin reports as pr_head; that recorded head is the one the
+# merge requires, so a task registered that way merges with no head written by
+# hand.
+test_origin_registered_head_is_the_merge_head() {
+  local case_dir rc
+  case_dir=$(make_origin_case origin-registered-head)
+  grep -v -e '^pr=' -e '^pr_head=' "$case_dir/state/task-x1.meta" > "$case_dir/meta.new"
+  "$REAL_MV" "$case_dir/meta.new" "$case_dir/state/task-x1.meta"
+
+  set +e
+  FM_ROOT_OVERRIDE="$ROOT" \
+  FM_HOME="$case_dir/home" \
+  FM_STATE_OVERRIDE="$case_dir/state" \
+  FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+  HOME="$case_dir/user-home" \
+  PATH="$case_dir/fakebin:$PATH" \
+    "$ROOT/bin/fm-pr-check.sh" task-x1 "$OG_URL" \
+    > "$case_dir/register.out" 2> "$case_dir/register.err"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-registered-head: registering the pull request failed: $(cat "$case_dir/register.err")"
+  assert_grep "pr view 5 -R $OG_ORG/$OG_REPO --json status,isDraft,headSha,headRef,baseRef,mergeCommitSha,mergedAt,url" \
+    "$case_dir/origin.log" "origin-registered-head: registration did not read the pull request record"
+  grep -qxF "pr_head=$OG_HEAD" "$case_dir/state/task-x1.meta" \
+    || fail "origin-registered-head: registration did not record the Origin-reported head as pr_head"
+
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-registered-head: the registered pull request should merge: $(cat "$case_dir/stderr")"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-registered-head: the merge was not bound to the registered head: '$(origin_merge_line "$case_dir/origin.log")'"
+  pass "fm-pr-check records the Origin-reported head at registration, and fm-pr-merge merges at that head"
+}
+
+test_origin_each_condition_refuses_independently() {
+  local case_dir name expected spec
+  set -- \
+    "closed|status=closed|status is \"closed\", not open" \
+    "merged|status=merged|status is \"merged\", not open" \
+    "draft-status|status=draft|status is \"draft\", not open" \
+    "draft|draft=true|the pull request is a draft" \
+    "draft-unreadable|draft=null|isDraft is \"null\", not false" \
+    "other-url|url=https://cursor.com/codebase/$OG_ORG/$OG_REPO/pull/6|Origin reports the pull request at \"https://cursor.com/codebase/$OG_ORG/$OG_REPO/pull/6\", not $OG_URL" \
+    "moved-head|head=$OG_STALE_HEAD evaluated_head=$OG_STALE_HEAD checks=ci:completed:success:$OG_STALE_HEAD|the live head $OG_STALE_HEAD is not the recorded head $OG_HEAD" \
+    "stacked|parent=\"pr_parent123\"|stacked on parent change pr_parent123; merging it would land every open pull request from the stack root through it in one commit" \
+    "not-mergeable|mergeable=false blockers=missing-approval|mergeable is \"false\", not true (blockers: missing-approval)" \
+    "conflicts|conflicts=true|hasMergeConflicts is \"true\", not false" \
+    "conflict-pending|conflict_state=\"MERGE_CONFLICT_STATE_PENDING\"|Origin is still checking for conflicts, which is not a clean answer" \
+    "conflict-state-absent|conflict_state=null|mergeConflictState is \"absent\", not MERGE_CONFLICT_STATE_CLEAN" \
+    "needs-restack|conflict_state=\"MERGE_CONFLICT_STATE_NEEDS_RESTACK\"|mergeConflictState is \"MERGE_CONFLICT_STATE_NEEDS_RESTACK\", not MERGE_CONFLICT_STATE_CLEAN" \
+    "stale-evaluation|evaluated_head=$OG_STALE_HEAD|mergeability was evaluated at \"$OG_STALE_HEAD\", not at the current head $OG_HEAD" \
+    "pending-check|checks=ci:in_progress:-|check \"ci\" is \"in_progress\", not completed" \
+    "queued-check|checks=ci:queued:-|check \"ci\" is \"queued\", not completed" \
+    "failing-check|checks=ci:completed:failure|check \"ci\" concluded \"failure\", not success" \
+    "cancelled-check|checks=ci:completed:cancelled|check \"ci\" concluded \"cancelled\", not success" \
+    "stale-check|checks=ci:completed:success:$OG_STALE_HEAD|check \"ci\" ran at \"$OG_STALE_HEAD\", not at the current head $OG_HEAD" \
+    "no-checks|checks=none|no check has reported at head $OG_HEAD"
+  for spec in "$@"; do
+    name=${spec%%|*}
+    expected=${spec##*|}
+    spec=${spec#*|}
+    # shellcheck disable=SC2086 # the field list is deliberately word-split
+    case_dir=$(make_origin_case "origin-refuse-$name" ${spec%%|*})
+    run_origin_refusal "$case_dir" "origin-refuse-$name" 1
+    assert_grep "error: refusing to merge $OG_URL" "$case_dir/stderr" \
+      "origin-refuse-$name: refusal did not name the pull request"
+    assert_grep "$expected" "$case_dir/stderr" \
+      "origin-refuse-$name: refusal did not name the failing condition"
+    assert_grep "pr=$OG_URL" "$case_dir/state/task-x1.meta" \
+      "origin-refuse-$name: a refusal should still leave the recorded PR reference"
+    assert_present "$case_dir/state/task-x1.check.sh" \
+      "origin-refuse-$name: a refusal should still leave the merge poll armed"
+  done
+
+  # Checks that pass the way origin's own "pr checks" passes them still merge.
+  case_dir=$(make_origin_case origin-neutral-skipped "checks=lint:completed:neutral docs:completed:skipped build:completed:success")
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-neutral-skipped: neutral and skipped checks should pass: $(cat "$case_dir/stderr")"
+  pass "fm-pr-merge refuses on each Cursor Origin pre-merge condition independently"
+}
+
+test_origin_reports_every_failing_condition() {
+  local case_dir
+  case_dir=$(make_origin_case origin-refuse-all draft=true parent='"pr_parent123"' \
+    conflict_state='"MERGE_CONFLICT_STATE_PENDING"' "checks=build:in_progress:- lint:completed:failure")
+  run_origin_refusal "$case_dir" origin-refuse-all 1
+  assert_grep 'the pull request is a draft' "$case_dir/stderr" "origin-refuse-all: the draft was not reported"
+  assert_grep 'stacked on parent change pr_parent123' "$case_dir/stderr" "origin-refuse-all: the stack parent was not reported"
+  assert_grep 'MERGE_CONFLICT_STATE_PENDING' "$case_dir/stderr" "origin-refuse-all: the pending conflict check was not reported"
+  assert_grep 'check "build" is "in_progress", not completed' "$case_dir/stderr" "origin-refuse-all: the pending check was not reported"
+  assert_grep 'check "lint" concluded "failure", not success' "$case_dir/stderr" "origin-refuse-all: the failing check was not reported"
+  pass "fm-pr-merge reports every failing Cursor Origin condition together"
+}
+
+# The recorded head is the one registration saw. It is read before
+# fm-pr-check.sh rewrites the metadata, so a run with none recorded refuses
+# even though this run records the URL again.
+test_origin_without_recorded_head_refuses() {
+  local case_dir
+  case_dir=$(make_origin_case origin-no-recorded-head)
+  grep -v '^pr_head=' "$case_dir/state/task-x1.meta" > "$case_dir/meta.new"
+  "$REAL_MV" "$case_dir/meta.new" "$case_dir/state/task-x1.meta"
+  run_origin_refusal "$case_dir" origin-no-recorded-head 1
+  assert_grep "no head was recorded for this pull request before this run, so the live head $OG_HEAD cannot be confirmed" \
+    "$case_dir/stderr" "origin-no-recorded-head: the missing recorded head was not reported"
+  pass "fm-pr-merge refuses a Cursor Origin merge with no recorded head to confirm"
+}
+
+# A refused moved head is not accepted by retrying: the merge run keeps the
+# recorded head, so only a fresh registration from a done report moves it.
+test_origin_moved_head_retry_still_refuses() {
+  local case_dir attempt rc
+  case_dir=$(make_origin_case origin-moved-head-retry head=$OG_STALE_HEAD \
+    evaluated_head=$OG_STALE_HEAD checks=ci:completed:success:$OG_STALE_HEAD)
+  printf '%s\n' "$OG_STALE_HEAD" > "$case_dir/origin-expected-head"
+  for attempt in 1 2; do
+    run_origin_refusal "$case_dir" "origin-moved-head-retry-$attempt" 1
+    assert_grep "the live head $OG_STALE_HEAD is not the recorded head $OG_HEAD; the moved head must be reviewed and re-reported done" \
+      "$case_dir/stderr" "origin-moved-head-retry-$attempt: the moved head refusal was not reported"
+    [ "$(grep '^pr_head=' "$case_dir/state/task-x1.meta")" = "pr_head=$OG_HEAD" ] \
+      || fail "origin-moved-head-retry-$attempt: the refused merge moved the recorded head: $(grep '^pr_head=' "$case_dir/state/task-x1.meta")"
+  done
+
+  set +e
+  FM_ROOT_OVERRIDE="$ROOT" \
+  FM_HOME="$case_dir/home" \
+  FM_STATE_OVERRIDE="$case_dir/state" \
+  FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+  HOME="$case_dir/user-home" \
+  PATH="$case_dir/fakebin:$PATH" \
+    "$ROOT/bin/fm-pr-check.sh" task-x1 "$OG_URL" \
+    > "$case_dir/register.out" 2> "$case_dir/register.err"
+  rc=$?
+  set -e
+  expect_code 0 "$rc" "origin-moved-head-retry: re-registering the pull request failed: $(cat "$case_dir/register.err")"
+  grep -qxF "pr_head=$OG_STALE_HEAD" "$case_dir/state/task-x1.meta" \
+    || fail "origin-moved-head-retry: a fresh registration did not record the moved head"
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-moved-head-retry: the re-registered head should merge: $(cat "$case_dir/stderr")"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_STALE_HEAD" ] \
+    || fail "origin-moved-head-retry: the merge was not bound to the re-registered head: '$(origin_merge_line "$case_dir/origin.log")'"
+  pass "fm-pr-merge keeps refusing a moved Cursor Origin head on retry until a fresh registration records it"
+}
+
+test_origin_unreadable_state_refuses() {
+  local case_dir variant
+  for variant in view-fails not-json no-groups bad-head; do
+    case_dir=$(make_origin_case "origin-unreadable-$variant")
+    case "$variant" in
+      view-fails) : > "$case_dir/origin-view-fails" ;;
+      not-json) printf 'not json\n' > "$case_dir/origin-pr.json" ;;
+      no-groups)
+        "$JQ_BIN" -c 'del(.ciState)' "$case_dir/origin-pr.json" > "$case_dir/pr.new"
+        "$REAL_MV" "$case_dir/pr.new" "$case_dir/origin-pr.json"
+        ;;
+      bad-head) write_origin_pr_json "$case_dir/origin-pr.json" head=not-a-sha ;;
+    esac
+    run_origin_refusal "$case_dir" "origin-unreadable-$variant" 1
+    assert_grep 'error: could not read the Cursor Origin pull request' "$case_dir/stderr" \
+      "origin-unreadable-$variant: the unreadable state was not reported"
+  done
+  pass "fm-pr-merge refuses a Cursor Origin pull request whose state, checks, or head it cannot read"
+}
+
+test_origin_allow_red_waives_only_the_named_check() {
+  local case_dir
+  case_dir=$(make_origin_case origin-allow-red "checks=lint:completed:failure build:completed:success")
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" --allow-red lint \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-allow-red: the named failing check should be waived: $(cat "$case_dir/stderr")"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-allow-red: the waived merge was not bound to the verified head"
+
+  case_dir=$(make_origin_case origin-allow-red-pending "checks=lint:in_progress:-")
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" --allow-red lint \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-allow-red-pending: a named still-running check should be waived: $(cat "$case_dir/stderr")"
+
+  case_dir=$(make_origin_case origin-allow-red-other "checks=lint:completed:failure build:in_progress:-")
+  run_origin_refusal "$case_dir" origin-allow-red-other 1 --allow-red lint
+  assert_grep 'check "build" is "in_progress", not completed' "$case_dir/stderr" \
+    "origin-allow-red-other: the unwaived check was not reported"
+  assert_no_grep 'check "lint"' "$case_dir/stderr" \
+    "origin-allow-red-other: the waived check was still reported"
+
+  case_dir=$(make_origin_case origin-allow-red-not-mergeable "checks=lint:completed:failure" mergeable=false)
+  run_origin_refusal "$case_dir" origin-allow-red-not-mergeable 1 --allow-red lint
+  assert_grep 'mergeable is "false", not true' "$case_dir/stderr" \
+    "origin-allow-red-not-mergeable: the waiver hid Origin's own mergeability verdict"
+
+  case_dir=$(make_origin_case origin-allow-red-away "checks=lint:completed:failure")
+  write_away_record "$case_dir" --words 'merge task-x1'
+  run_origin_refusal "$case_dir" origin-allow-red-away 2 --allow-red lint
+  assert_grep '--allow-red is attended-only' "$case_dir/stderr" \
+    "origin-allow-red-away: the refusal did not name attended-only"
+  pass "fm-pr-merge --allow-red waives only the named Cursor Origin check, failing or running, and only while attended"
+}
+
+test_origin_allow_no_pipeline_waives_only_no_checks() {
+  local case_dir
+  case_dir=$(make_origin_case origin-no-checks-waived checks=none)
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" --allow-no-pipeline \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-no-checks-waived: a pull request with no checks should merge with the waiver: $(cat "$case_dir/stderr")"
+  assert_grep "at the recorded head $OG_HEAD, with no checks, waived by --allow-no-pipeline" "$case_dir/stderr" \
+    "origin-no-checks-waived: the waived verification was not reported"
+
+  case_dir=$(make_origin_case origin-no-checks-waiver-pending "checks=ci:in_progress:-")
+  run_origin_refusal "$case_dir" origin-no-checks-waiver-pending 1 --allow-no-pipeline
+  assert_grep 'check "ci" is "in_progress", not completed' "$case_dir/stderr" \
+    "origin-no-checks-waiver-pending: the waiver reached a check that exists"
+
+  case_dir=$(make_origin_case origin-no-checks-waiver-stacked checks=none parent='"pr_parent123"')
+  run_origin_refusal "$case_dir" origin-no-checks-waiver-stacked 1 --allow-no-pipeline
+
+  case_dir=$(make_origin_case origin-no-checks-away checks=none)
+  write_away_record "$case_dir" --words 'merge task-x1'
+  run_origin_refusal "$case_dir" origin-no-checks-away 2 --allow-no-pipeline
+  assert_grep '--allow-no-pipeline is attended-only' "$case_dir/stderr" \
+    "origin-no-checks-away: the refusal did not name attended-only"
+
+  case_dir=$(make_origin_case origin-allow-missing)
+  run_origin_refusal "$case_dir" origin-allow-missing 2 --allow-missing ci
+  assert_grep '--allow-missing does not apply to Cursor Origin' "$case_dir/stderr" \
+    "origin-allow-missing: the refusal did not name Origin"
+  [ ! -s "$case_dir/origin.log" ] || fail "origin-allow-missing: origin ran despite the refused flag"
+  pass "fm-pr-merge --allow-no-pipeline waives only a Cursor Origin pull request with no checks, while attended"
+}
+
+test_origin_merge_method_and_extra_args() {
+  local case_dir spec name args expected method rc
+  # The method the caller names, else squash.
+  set -- \
+    "default-squash||squash" \
+    "named-merge|--merge|merge" \
+    "method-equals|--method=merge|merge" \
+    "method-value|--method squash|squash"
+  for spec in "$@"; do
+    IFS='|' read -r name args method <<EOF
+$spec
+EOF
+    case_dir=$(make_origin_case "origin-method-$name")
+    # shellcheck disable=SC2086 # the extra arguments are deliberately word-split
+    run_pr_merge "$case_dir" task-x1 "$OG_URL" -- $args \
+      > "$case_dir/stdout" 2> "$case_dir/stderr" \
+      || fail "origin-method-$name: the merge should succeed: $(cat "$case_dir/stderr")"
+    [ "$(cat "$case_dir/origin-merge-method" 2>/dev/null)" = "$method" ] \
+      || fail "origin-method-$name: expected a $method merge, got '$(cat "$case_dir/origin-merge-method" 2>/dev/null)'"
+  done
+
+  set -- \
+    "rebase|--rebase|Cursor Origin has no rebase merge" \
+    "method-rebase|--method rebase|Cursor Origin merges only with --squash or --merge, not \"rebase\"" \
+    "bypass|--bypass-rules|extra merge arguments other than a merge method are not supported for Cursor Origin merges" \
+    "subject|--squash --subject x|extra merge arguments other than a merge method are not supported for Cursor Origin merges"
+  for spec in "$@"; do
+    IFS='|' read -r name args expected <<EOF
+$spec
+EOF
+    case_dir=$(make_origin_case "origin-method-refuse-$name")
+    # shellcheck disable=SC2086 # the extra arguments are deliberately word-split
+    run_origin_refusal "$case_dir" "origin-method-refuse-$name" 1 -- $args
+    assert_grep "$expected" "$case_dir/stderr" \
+      "origin-method-refuse-$name: the refusal did not name its reason"
+  done
+
+  # A method the repository disallows is Origin's own refusal, never a switch
+  # to another method.
+  case_dir=$(make_origin_case origin-method-disallowed)
+  printf 'squash\n' > "$case_dir/origin-disallowed-method"
+  set +e
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr"
+  rc=$?
+  set -e
+  [ "$rc" -ne 0 ] || fail "origin-method-disallowed: a disallowed squash should fail the merge"
+  [ "$(origin_merge_line "$case_dir/origin.log")" = "pr merge 5 -R $OG_ORG/$OG_REPO --squash --match-head-commit $OG_HEAD" ] \
+    || fail "origin-method-disallowed: unexpected merge invocation: '$(origin_merge_line "$case_dir/origin.log")'"
+  assert_grep 'squash merges are not allowed on this repository' "$case_dir/stderr" \
+    "origin-method-disallowed: Origin's refusal was not shown"
+  assert_grep "the Cursor Origin merge command for $OG_URL failed" "$case_dir/stderr" \
+    "origin-method-disallowed: the failed merge was not reported"
+  assert_absent "$case_dir/origin-merged" "origin-method-disallowed: the mock recorded a landed merge"
+  assert_absent "$case_dir/state/.wake-queue" "origin-method-disallowed: a refused merge left a landed outcome"
+
+  # Auto-merge stays out of reach even with the attended override that
+  # re-enables it on GitHub.
+  case_dir=$(make_origin_case origin-auto)
+  run_origin_refusal "$case_dir" origin-auto 1 --attended-override -- --auto
+  assert_grep 'extra merge arguments other than a merge method are not supported for Cursor Origin merges' \
+    "$case_dir/stderr" "origin-auto: auto-merge was not refused"
+
+  case_dir=$(make_origin_case origin-head-override)
+  run_origin_refusal "$case_dir" origin-head-override 1 -- --match-head-commit "$OG_STALE_HEAD"
+  assert_grep 'extra merge arguments must not override the head commit' "$case_dir/stderr" \
+    "origin-head-override: a caller head was not refused"
+
+  case_dir=$(make_origin_case origin-repo-override)
+  run_origin_refusal "$case_dir" origin-repo-override 1 -- -R other/repo
+  assert_grep 'extra merge arguments must not override the repository' "$case_dir/stderr" \
+    "origin-repo-override: a caller repository was not refused"
+  pass "fm-pr-merge merges Origin with the named method or squash, leaves a disallowed one for Origin to refuse, and refuses every other extra argument"
+}
+
+# Only a read-back of status merged with a merge commit and a time proves the
+# merge landed; the merge command's success alone is never reported as landed.
+test_origin_unproved_merge_refuses() {
+  local case_dir rc variant
+  for variant in still-open no-commit unreadable; do
+    case_dir=$(make_origin_case "origin-unproved-$variant")
+    case "$variant" in
+      still-open) : > "$case_dir/origin-merge-noop" ;;
+      no-commit)
+        printf '{"status":"merged","mergeCommitSha":null,"mergedAt":"%s"}\n' "$OG_MERGED_AT" \
+          > "$case_dir/origin-pr-post.json"
+        ;;
+      unreadable) printf '9\n' > "$case_dir/origin-post-merge-view-failures" ;;
+    esac
+    set +e
+    run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+      > "$case_dir/stdout" 2> "$case_dir/stderr"
+    rc=$?
+    set -e
+    expect_code 1 "$rc" "origin-unproved-$variant: an unproved merge must be refused"
+    [ -n "$(origin_merge_line "$case_dir/origin.log")" ] \
+      || fail "origin-unproved-$variant: the merge command was never run"
+    assert_grep "Cursor Origin did not prove $OG_URL merged" "$case_dir/stderr" \
+      "origin-unproved-$variant: the unproved merge was not reported"
+    assert_grep 'error: > Merged pull request' "$case_dir/stderr" \
+      "origin-unproved-$variant: the forge's own output was not quoted"
+    assert_no_grep 'is merged as commit' "$case_dir/stdout" \
+      "origin-unproved-$variant: an unproved merge was reported as landed"
+    [ "$variant" != still-open ] || assert_grep 'status=open' "$case_dir/stderr" \
+      "origin-unproved-still-open: the observed status was not reported"
+    assert_absent "$case_dir/state/.wake-queue" \
+      "origin-unproved-$variant: an unproved merge left a landed outcome"
+    assert_present "$case_dir/state/task-x1.check.sh" \
+      "origin-unproved-$variant: the merge poll was not left armed"
+    [ "$(sed -n 6p "$case_dir/state/task-x1.merge-authority" 2>/dev/null || true)" = attended ] \
+      || fail "origin-unproved-$variant: the accepted merge's authority was not persisted for the poll"
+  done
+
+  # A transient read failure after a landed merge is retried, not refused.
+  case_dir=$(make_origin_case origin-confirm-retry)
+  printf '2\n' > "$case_dir/origin-post-merge-view-failures"
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-confirm-retry: a landed merge must survive a transient read failure: $(cat "$case_dir/stderr")"
+  [ "$(cat "$case_dir/origin-post-merge-view-failures")" = 0 ] \
+    || fail "origin-confirm-retry: the read-back was not retried"
+  assert_grep "verified: $OG_URL is merged as commit $OG_MERGE_COMMIT" "$case_dir/stdout" \
+    "origin-confirm-retry: the retried proof was not reported"
+  pass "fm-pr-merge refuses a Cursor Origin merge it cannot prove and retries only an unreadable read-back"
+}
+
+test_origin_failed_merge_command_propagates() {
+  local case_dir rc variant
+  for variant in refused moved-head; do
+    case_dir=$(make_origin_case "origin-merge-$variant")
+    case "$variant" in
+      refused) : > "$case_dir/origin-merge-fails" ;;
+      moved-head) printf '%s\n' "$OG_STALE_HEAD" > "$case_dir/origin-expected-head" ;;
+    esac
+    set +e
+    run_pr_merge "$case_dir" task-x1 "$OG_URL" \
+      > "$case_dir/stdout" 2> "$case_dir/stderr"
+    rc=$?
+    set -e
+    expect_code 1 "$rc" "origin-merge-$variant: a failed merge command must fail the run"
+    assert_grep "the Cursor Origin merge command for $OG_URL failed" "$case_dir/stderr" \
+      "origin-merge-$variant: the failed merge was not reported"
+    assert_grep 'Error: ' "$case_dir/stderr" "origin-merge-$variant: the forge's error was not surfaced"
+    assert_absent "$case_dir/state/task-x1.merge-authority" \
+      "origin-merge-$variant: a refused merge persisted merge authority"
+    assert_absent "$case_dir/state/.wake-queue" "origin-merge-$variant: a failed merge left a landed outcome"
+  done
+  pass "fm-pr-merge propagates a failed Cursor Origin merge command, including a head that moved after verification"
+}
+
+test_origin_away_record_merges_green_under_away_authority() {
+  local case_dir
+  case_dir=$(make_origin_case origin-away-green)
+  write_away_record "$case_dir" --words 'merge the origin fix when green'
+  run_pr_merge "$case_dir" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "origin-away-green: a green merge under the away record should succeed: $(cat "$case_dir/stderr")"
+  assert_grep "merge landed: task-x1 $OG_URL away" "$case_dir/state/.wake-queue" \
+    "origin-away-green: the durable outcome did not tag away"
+  [ "$(sed -n 6p "$case_dir/state/task-x1.merge-authority" 2>/dev/null || true)" = away ] \
+    || fail "origin-away-green: the persisted merge authority is not away"
+  pass "fm-pr-merge merges a green Cursor Origin pull request under away authority"
+}
+
+test_origin_missing_tool_refuses_before_recording() {
+  local case_dir rc tool other
+  for tool in origin jq; do
+    if [ "$tool" = origin ]; then other=jq; else other=origin; fi
+    case_dir=$(make_origin_case "origin-no-$tool")
+    grep -v '^pr=\|^pr_head=' "$case_dir/state/task-x1.meta" > "$case_dir/meta.new"
+    "$REAL_MV" "$case_dir/meta.new" "$case_dir/state/task-x1.meta"
+    mirror_path_without "$case_dir/no$tool" "$tool" "$case_dir/fakebin"
+    PATH="$case_dir/no$tool" command -v "$other" >/dev/null 2>&1 \
+      || fail "origin-no-$tool: the $tool-free search path lost the $other mock as well"
+
+    set +e
+    FM_ROOT_OVERRIDE="$ROOT" \
+    FM_STATE_OVERRIDE="$case_dir/state" \
+    FM_TEST_GH_AXI_LOG="$case_dir/gh-axi.log" \
+    FM_TEST_ORIGIN_LOG="$case_dir/origin.log" \
+    PATH="$case_dir/no$tool" \
+      "$PR_MERGE" task-x1 "$OG_URL" > "$case_dir/stdout" 2> "$case_dir/stderr"
+    rc=$?
+    set -e
+
+    expect_code 1 "$rc" "origin-no-$tool: fm-pr-merge should refuse"
+    assert_grep "error: merging a Cursor Origin pull request requires $tool on PATH" \
+      "$case_dir/stderr" "origin-no-$tool: refusal did not name the missing tool"
+    assert_no_grep "pr=$OG_URL" "$case_dir/state/task-x1.meta" \
+      "origin-no-$tool: a PR reference was recorded despite the missing tool"
+    assert_absent "$case_dir/state/task-x1.check.sh" \
+      "origin-no-$tool: a merge poll was armed despite the missing tool"
+  done
+  pass "fm-pr-merge refuses before recording anything when origin or jq is absent"
+}
+
 test_gitlab_head_override_args_refuse_before_recording() {
   local case_dir rc
   case_dir=$(make_gitlab_case gitlab-head-override)
@@ -2988,6 +3635,20 @@ test_forgejo_missing_tool_refuses_before_recording
 test_forgejo_rejected_merge_is_never_trusted_by_exit_status
 test_forgejo_transient_confirm_read_failure_still_persists_authority
 test_forgejo_merge_method_and_extra_args
+test_origin_url_resolves_and_merges
+test_origin_registered_head_is_the_merge_head
+test_origin_each_condition_refuses_independently
+test_origin_reports_every_failing_condition
+test_origin_without_recorded_head_refuses
+test_origin_moved_head_retry_still_refuses
+test_origin_unreadable_state_refuses
+test_origin_allow_red_waives_only_the_named_check
+test_origin_allow_no_pipeline_waives_only_no_checks
+test_origin_merge_method_and_extra_args
+test_origin_unproved_merge_refuses
+test_origin_failed_merge_command_propagates
+test_origin_away_record_merges_green_under_away_authority
+test_origin_missing_tool_refuses_before_recording
 
 # The merge gate asks whether the task is still held for the captain. A home
 # that carries no backlog records no captain calls at all, so nothing can be
@@ -4559,7 +5220,7 @@ test_allow_no_pipeline_is_attended_only_and_gitlab_only() {
   assert_grep '--allow-no-pipeline applies only to GitLab' "$case_dir/stderr" \
     "forgejo-no-pipeline: the refusal did not name GitLab"
   [ ! -s "$case_dir/tea.log" ] || fail "forgejo-no-pipeline: tea ran despite the waiver"
-  pass "fm-pr-merge --allow-no-pipeline is attended-only, takes no value, and applies only to GitLab"
+  pass "fm-pr-merge --allow-no-pipeline is attended-only, takes no value, and is refused on GitHub and Forgejo"
 }
 
 test_gitlab_head_override_args_refuse_before_recording

@@ -75,9 +75,8 @@
 # pipeline's pr and ci steps do not drive Origin, so a no-mistakes run skips
 # them and the worker then opens the PR and waits on its checks, the way
 # pr=manual does (docs/origin-cli-integration.md holds the CLI evidence). A
-# person merges an Origin pull request in Origin. A forge composes with
-# the two modes that publish and is refused on local-only, which publishes
-# nothing. On gerrit the worker publishes one squashed change with
+# forge composes with the two modes that publish and is refused on local-only,
+# which publishes nothing. On gerrit the worker publishes one squashed change with
 # `gerrit-axi publish --squash` instead of opening a pull request: direct-PR does
 # that straight away, and no-mistakes first runs the pipeline with its three
 # forge-facing steps skipped and recovers the pipeline's own fix commits into its
@@ -555,7 +554,7 @@ fm_dod_origin_pr_steps() {  # <branch> <push-step>
 2. $push_step
 3. Find the PR for your branch first: \`origin pr view $branch_q --json number,url\` prints it when one is open. If one exists, update its title and body with \`origin pr edit <number> --title '<title>' --body-file <path>\`. Otherwise open it from this copy with \`origin pr create --head $branch_q --title '<title>' --body-file <path>\`, ready for review, not a draft; it takes the repository from this copy's \`origin\` remote and targets its default branch.
 4. Take the PR's number and URL from \`origin pr view $branch_q --json number,url\`, never by building the URL yourself: Origin serves the PR page at a \`https://cursor.com/codebase/...\` address, not on the \`origin.cursor.com\` git host.
-5. Never comment on, review, merge, or close this PR or any other; a person merges it in Origin.
+5. Never comment on, review, merge, or close this PR or any other.
 EOF
 }
 
@@ -682,7 +681,7 @@ A draft cannot be merged, so a done report on one leaves the merge unasked.
 Then append \`done [at=<epoch>]: PR {url}\` to the status file and stop, with {url} exactly as \`origin pr view\` printed it.
 That \`done:\` is accepted only when this copy's HEAD - your latest commit - is pushed to your PR branch; the check tests that commit, not merely that a branch moved.
 If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
-Do NOT run /no-mistakes. A person merges the PR in Origin; firstmate watches for the merge and relays the outcome.
+Do NOT run /no-mistakes. The configured merge authority decides whether to merge the PR; firstmate relays the outcome.
 EOF
       ;;
     no-mistakes:origin)
@@ -711,7 +710,6 @@ A draft cannot be merged, so a done report on one leaves the merge unasked.
 Then append \`done [at=<epoch>]: PR {url} checks green\` and stop, with {url} exactly as \`origin pr view\` printed it. You are finished.
 That CI-ready \`done:\` is accepted only when this copy's HEAD - your latest commit - is one the /no-mistakes run pushed, so commit nothing after the last run; the check tests that commit, not merely that a branch moved.
 If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the draft is held}\` instead of done.
-A person merges the PR in Origin; firstmate watches for the merge and relays the outcome.
 EOF
       ;;
     direct-PR:*)
