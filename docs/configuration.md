@@ -784,6 +784,34 @@ With the file absent, nothing is armed and an already armed check prints nothing
 Creating the flag takes effect at the next session start, or immediately after `bin/fm-pr-health.sh arm`.
 The flag is a home-local preference and is not inherited by secondmate homes.
 
+## Local usage report
+
+`bin/fm-usage-report.sh` imports local accounting into `data/usage-report/usage.sqlite` and renders `data/usage-report/index.html` under the effective `FM_HOME` (or `FM_DATA_OVERRIDE`).
+Both files are private and gitignored; do not publish the HTML or serve that directory.
+The offline report shows each provider's current quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
+Unknown attribution remains unassigned; missing quota falls back to role shares of local tokens.
+
+The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, explicit role bindings, quota sampling, and launchd definition commands.
+Its `refresh` command imports, samples through `quota-axi` without credential refresh or permission prompts, and renders the report.
+Its `install` and `uninstall` commands only write and remove a home-specific user-agent definition; they never load or unload it.
+Review and run the printed `launchctl` command yourself to enable the hourly job, or unload it before uninstalling.
+No background job runs until then.
+
+Estimates use the versioned, cited API rates in `bin/usage-prices.json`, not actual subscription prices.
+The report shows the local rate, usable hourly-pair count, seed status, and window scaling.
+Three fresh hourly pairs from the same quota segment allow a measured rate; measured rates refit weekly.
+The Claude cold-start seed is a community large-plan estimate, not this account's measured allowance.
+Without a published seed, the report can allocate known quota by relative priced usage but cannot claim a calibrated token-to-quota rate.
+Account-wide scaling assigns the observed reading to local priced records, so other devices, API traffic, missing logs, and account changes can bias every estimate.
+The report discloses these limits and never claims exact per-session quota use.
+
+Only accounting fields and source locators persist, never transcript text, credentials, or account identifiers.
+Multiple quota lanes, stale readings, unknown window bounds, and reads that would need permission stay unavailable instead of combining accounts or prompting.
+Task bindings retain metadata seen during imports; historical pooled copies without a proven binding stay unassigned.
+Compactions without a producing model remain unknown; unsupported compressed logs are not imported.
+The Codex adapter follows advancing cumulative snapshots and separately matched compaction records; inherited fork-time bursts become baselines rather than new usage.
+`tests/fm-usage-report.test.sh` exercises the public CLI against synthetic sources, quota readings, and a temporary LaunchAgents directory.
+
 ## No-mistakes pipeline spend (config/pipeline-spend)
 
 The optional local, gitignored `config/pipeline-spend` presence flag opts this home into recording per-task no-mistakes pipeline spend in `data/pipeline-spend.jsonl` during teardown.

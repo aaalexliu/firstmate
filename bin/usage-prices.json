@@ -1,0 +1,71 @@
+{
+  "version": "2026-11-04.1",
+  "unit": "USD per million tokens; standard global API list rates, not subscription spend",
+  "sources": {
+    "claude": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "codex": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "grok": "https://docs.x.ai/developers/pricing",
+    "claude_seed": "https://wokey.ai/claude-max-limits"
+  },
+  "seed": {
+    "claude": {
+      "pp_per_dollar": 0.07407407407407407,
+      "note": "Seed only: $13.50 API-priced usage per 1 percentage point, midpoint of the approved $12-15 large-plan estimate. Not a measured allowance for this account."
+    }
+  },
+  "models": {
+    "claude-opus-5-5": {
+      "provider": "claude",
+      "rates": [4, 0.2, 5, 20],
+      "write_1h": 8
+    },
+    "claude-opus-4-8": {
+      "provider": "claude",
+      "rates": [5, 0.5, 6.25, 25],
+      "write_1h": 10
+    },
+    "claude-opus-4-6": {
+      "provider": "claude",
+      "rates": [5, 0.5, 6.25, 25],
+      "write_1h": 10
+    },
+    "claude-sonnet-5": {
+      "provider": "claude",
+      "rates": [2, 0.2, 2.5, 10],
+      "write_1h": 4
+    },
+    "claude-sonnet-4-6": {
+      "provider": "claude",
+      "rates": [3, 0.3, 3.75, 15],
+      "write_1h": 6
+    },
+    "claude-sonnet-4-5": {
+      "provider": "claude",
+      "rates": [3, 0.3, 3.75, 15],
+      "write_1h": 6
+    },
+    "claude-haiku-4-5": {
+      "provider": "claude",
+      "rates": [1, 0.1, 1.25, 5],
+      "write_1h": 2
+    },
+    "gpt-6.1-sol": {
+      "provider": "codex",
+      "rates": [2, 0.1, 2.5, 10],
+      "long_above": 272000,
+      "long_multipliers": [2, 2, 2, 1.5]
+    },
+    "grok-4.7": {
+      "provider": "grok",
+      "rates": [2, 0.5, 0, 6],
+      "long_at": 200000,
+      "long_multipliers": [2, 2, 1, 2]
+    },
+    "grok-4.5": {
+      "provider": "grok",
+      "rates": [2, 0.3, 0, 6],
+      "long_at": 200000,
+      "long_multipliers": [2, 2, 1, 2]
+    }
+  }
+}
