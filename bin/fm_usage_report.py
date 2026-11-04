@@ -708,11 +708,14 @@ def main():
     parser.add_argument('--nm-db', type=Path, help='Read-only no-mistakes state.sqlite')
     parser.add_argument('--task-data-root', type=Path, help='Firstmate backlog and project registry root (default: FM_HOME/data, independent of report output)')
     parser.add_argument('--output', type=Path, help='Private offline HTML destination')
+    parser.add_argument('--now', type=float, help='Fixed Unix time for deterministic accounting replay')
     parser.add_argument('--launch-agents', type=Path, default=Path.home()/'Library/LaunchAgents')
     parser.add_argument('--source', choices=['pi', 'claude', 'codex-compaction', 'codex-cumulative'])
     parser.add_argument('--session', help='Exact native session ID for a retained role binding')
     parser.add_argument('--role', choices=ROLES)
     args = parser.parse_args()
+    if args.now is not None and not math.isfinite(args.now):
+        parser.error('--now must be a finite Unix timestamp')
     os.umask(0o077)
     home = Path(os.environ['FM_HOME']).resolve()
     data = Path(os.environ.get('FM_DATA_OVERRIDE', home/'data')) / 'usage-report'
@@ -723,7 +726,7 @@ def main():
         launch_agent(args, home)
         return
     store = Store(data/'usage.sqlite')
-    now = time.time()
+    now = args.now if args.now is not None else time.time()
     runs, links = [], []
     with store.db:
         if args.command == 'bind':
@@ -759,7 +762,8 @@ def main():
         if args.command in ['report', 'refresh']:
             facts, excluded = attributed(store, store.rows('facts'), runs, links, home)
             output = args.output or data/'index.html'
-            payload = build_report(store, facts, excluded, output, now)
+            render_now = now if args.now is not None else time.time()
+            payload = build_report(store, facts, excluded, output, render_now)
             print(f'Report: {output} ({len(payload["facts"])} accounting facts; private)')
         else:
             print(f'{args.command}: accounting records saved')

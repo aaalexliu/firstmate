@@ -79,11 +79,14 @@ class UsageReport(unittest.TestCase):
         with sqlite3.connect(self.home/'data/usage-report/usage.sqlite') as db:
             return [json.loads(r[0]) for r in db.execute('SELECT data FROM '+table)]
 
-    def report(self):
-        self.cli('report')
+    def rendered_report(self):
         match = re.search(r'const DATA\s*=\s*(.*);\n', self.output.read_text())
         self.assertIsNotNone(match)
         return json.loads(match[1])
+
+    def report(self):
+        self.cli('report')
+        return self.rendered_report()
 
     def nm_db(self, mode='cold', deltas=(100, 20, 200), completed=True):
         db = sqlite3.connect(self.nm)
@@ -468,6 +471,34 @@ class UsageReport(unittest.TestCase):
         self.assertIn('Session usage',html)
         self.assertIn("connect-src 'none'",html)
         self.assertNotIn('SECRET_',html)
+
+    def test_refresh_delayed_quota_uses_post_sample_clock_and_explicit_now(self):
+        self.write('pi',self.pi())
+        script=self.fakebin/'quota-axi'
+        script.write_text('#!/usr/bin/env python3\nimport datetime,json,os,time\nfrom pathlib import Path\n'
+            'time.sleep(.05)\n'
+            'payload=json.loads(Path(os.environ["FAKE_QUOTA"]).read_text())\n'
+            'payload["generatedAt"]=datetime.datetime.now(datetime.timezone.utc).isoformat()\n'
+            'print(json.dumps(payload))\n')
+        self.cli('refresh')
+        rendered=self.rendered_report()
+        windows={w['provider']:w for w in rendered['windows']}
+        for provider in ['claude','codex']:
+            self.assertTrue(windows[provider]['available'])
+            self.assertGreater(windows[provider]['generated'],windows[provider]['observed'])
+            self.assertGreaterEqual(rendered['generated'],windows[provider]['generated'])
+        replay=self.now+3600
+        self.cli('refresh','--now',str(replay))
+        rendered=self.rendered_report()
+        self.assertEqual(rendered['generated'],replay)
+        self.cli('report','--now',str(replay))
+        self.assertEqual(self.rendered_report(),rendered)
+        self.cli('report','--now','0')
+        self.assertEqual(self.rendered_report()['generated'],0)
+        for invalid in ['nan','inf']:
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                self.cli('report','--now',invalid)
+            self.assertEqual(error.exception.returncode,2)
 
     def test_launchd_install_uninstall_no_load(self):
         directory=self.root/'LaunchAgents'
