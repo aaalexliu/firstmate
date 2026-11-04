@@ -21,6 +21,7 @@ ROLES = ['main chat', 'supervision', 'worker', 'scout', 'reviewer', 'fixer',
          'helper subagents', 'other automation', 'unassigned']
 PROVIDERS = ['claude', 'codex', 'grok']
 FIELDS = ['fresh', 'read', 'write', 'output']
+PARSER_VERSION = 2
 PRICES = json.loads((HERE / 'usage-prices.json').read_text())
 
 
@@ -112,13 +113,83 @@ def base(source, sid, path, ts, cwd='', **kw):
                 write1h=None, output=None, reported=None, grain='response', normalization_version=1, **kw)
 
 
-def pi_row(store, path, row, state, supervision):
+def same_path(value, expected):
+    try:
+        return isinstance(value, str) and Path(value).is_absolute() and Path(value).resolve() == Path(expected).resolve()
+    except (OSError, RuntimeError, ValueError, TypeError):
+        return False
+
+
+def task_catalog(data_root, projects_root):
+    registered = set()
+    registry = data_root / 'projects.md'
+    if registry.exists():
+        for line in registry.read_text().splitlines():
+            match = re.match(r'^- ([A-Za-z0-9._-]+) \[', line)
+            if match:
+                registered.add(match[1])
+    result = {}
+    backlog = data_root / 'backlog.md'
+    if not backlog.exists():
+        return result
+    for line in backlog.read_text().splitlines():
+        match = re.match(r'^- \[[ x]\] ([A-Za-z0-9._-]+) - ', line)
+        if not match:
+            continue
+        repos = re.findall(r'\(repo: ([A-Za-z0-9._-]+)\)', line)
+        kinds = re.findall(r'\(kind: (ship|scout)\)', line)
+        project = projects_root / repos[-1] if repos and repos[-1] in registered else None
+        task_record = data_root / match[1] / 'brief.md'
+        result[match[1]] = dict(
+            project=str(project) if project and project.is_dir() else None,
+            role={'ship': 'worker', 'scout': 'scout'}.get(kinds[-1] if kinds else None, 'unassigned'),
+            task_record=str(task_record if task_record.exists() else backlog))
+    return result
+
+
+def launch_binding(store, row, state, home, state_root, catalog):
+    message = row.get('message', {})
+    if message.get('role') != 'user' or same_path(state.get('cwd'), home):
+        return
+    content = message.get('content', '')
+    text = content if isinstance(content, str) else '\n'.join(
+        block.get('text', '') for block in content if isinstance(block, dict) and block.get('type') == 'text')
+    if not text.lstrip('\u2063').startswith('FIRSTMATE_OP: v1 launch-brief:'):
+        return
+    match = re.search(r'^Your steering inbox is `([^`\n]+)`;', text, re.MULTILINE)
+    if not match:
+        return
+    inbox = Path(match[1])
+    if not same_path(str(inbox.parent), state_root) or not inbox.name.endswith('.inbox'):
+        return
+    task = inbox.name[:-6]
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', task):
+        return
+    started, launched = state.get('session_start'), stamp(row.get('timestamp'))
+    if started is None or launched is None or launched < started:
+        return  # A copied parent launch is not a launch of this native session.
+    item = {k: v for k, v in catalog.get(task, {}).items() if v is not None and v != 'unassigned'}
+    key = digest('pi-launch', state['sid'], task)
+    existing = store.db.execute('SELECT data FROM bindings WHERE key=?', (key,)).fetchone()
+    if existing:
+        item = dict(json.loads(existing[0]), **item)
+    binding = dict(key=key, origin='pi-launch', source='pi', session=state['sid'], task=task,
+                   cwd=state.get('cwd'), start=started, end=None,
+                   role=item.get('role', 'unassigned'), project=item.get('project'),
+                   task_record=item.get('task_record'),
+                   evidence='Native Pi session contains its typed Firstmate launch contract; task kind and project from backlog')
+    store.put('bindings', key, binding)
+
+
+def pi_row(store, path, row, state, supervision, home, state_root, catalog):
     typ = row.get('type')
     if typ == 'session':
         state.update(sid=row.get('id', str(path)), cwd=row.get('cwd', ''),
                      session_start=stamp(row.get('timestamp')))
         return
     msg = row.get('message', {})
+    if typ == 'message' and not supervision:
+        launch_binding(store, row, state, home, state_root, catalog)
     if typ == 'message' and msg.get('role') not in ['assistant', 'toolResult']:
         return
     obj = msg if typ == 'message' else row
@@ -259,13 +330,14 @@ def codex_fact(store, path, state, u, ts, key, source):
     store.fact(key, fact)
 
 
-def import_file(store, path, source, supervision=False):
+def import_file(store, path, source, supervision, home, state_root, catalog):
     stat = path.stat()
     identity = f'{stat.st_dev}:{stat.st_ino}'
     old = store.db.execute('SELECT * FROM cursors WHERE path=?', (str(path),)).fetchone()
     offset, state = 0, {}
     with path.open('rb') as stream:
-        if old and old['identity'] == identity and stat.st_size >= old['offset']:
+        if (old and old['identity'] == identity and stat.st_size >= old['offset']
+                and json.loads(old['state']).get('parser_version') == PARSER_VERSION):
             prefix = hashlib.sha256(stream.read(min(old['offset'], 4096))).hexdigest()
             if prefix == old['prefix']:
                 offset, state = old['offset'], json.loads(old['state'])
@@ -280,7 +352,7 @@ def import_file(store, path, source, supervision=False):
                 if not isinstance(row, dict):
                     raise ValueError('not object')
                 if source == 'pi':
-                    pi_row(store, path, row, state, supervision)
+                    pi_row(store, path, row, state, supervision, home, state_root, catalog)
                 elif source == 'claude':
                     claude_row(store, path, row, state)
                 else:
@@ -289,6 +361,7 @@ def import_file(store, path, source, supervision=False):
                 store.warn(path, 'Malformed or unsupported accounting record skipped')
         stream.seek(0)
         prefix = hashlib.sha256(stream.read(min(offset, 4096))).hexdigest()
+    state['parser_version'] = PARSER_VERSION
     store.db.execute('INSERT OR REPLACE INTO cursors VALUES (?, ?, ?, ?, ?)',
                      (str(path), identity, offset, prefix, json.dumps(state)))
 
@@ -316,7 +389,8 @@ def capture_tasks(store, state_root, now):
                     task_record=str(path), evidence='Exact task copy and validity-bounded metadata binding')
         store.put('bindings', key, item)
     for item in store.rows('bindings'):
-        if item.get('task') and item['key'] not in live and item.get('end') is None:
+        if (item.get('task') and item.get('origin') != 'pi-launch'
+                and item['key'] not in live and item.get('end') is None):
             item['end'] = now
             store.put('bindings', item['key'], item)
 
@@ -384,7 +458,7 @@ def import_nm(store, path):
         return list(runs.values()), links
 
 
-def attributed(store, facts, runs, links):
+def attributed(store, facts, runs, links, home):
     bindings = store.rows('bindings')
     native_logs = {f['session']: f['locator'] for f in facts if f['source'] != 'no-mistakes'}
     exact_nm = {l['session_id'] for l in links}
@@ -403,8 +477,12 @@ def attributed(store, facts, runs, links):
             if item not in excluded['possible_records']:
                 excluded['possible_records'].append(item)
             continue
+        if f['source'] == 'pi' and f['role'] == 'unassigned' and same_path(f['cwd'], home):
+            f.update(role='main chat', evidence='Primary Pi session in the Firstmate home cwd; not the supervision store',
+                     project=str(home))
         explicit = [b for b in bindings if b.get('session') == f['session'] and b.get('source', f['source']) == f['source']]
-        bounded = [b for b in bindings if f['cwd'] and b.get('cwd') == f['cwd']
+        manual = [b for b in explicit if not b.get('task')]
+        bounded = [b for b in bindings if not b.get('session') and f['cwd'] and b.get('cwd') == f['cwd']
                    and f.get('session_start', f['start']) is not None
                    and b['start'] <= f.get('session_start', f['start'])
                    and f['time'] is not None and b['start'] <= f['time'] < (b.get('end') or float('inf'))]
@@ -419,9 +497,10 @@ def attributed(store, facts, runs, links):
                        and b.get('branch') and b['branch'] == f.get('branch') and f['time'] is not None
                        and f['start'] is not None and b['start'] <= f['start']
                        and b['start'] <= f['time'] < (b.get('end') or float('inf'))]
-        matches = explicit or bounded
-        if len(matches) == 1:
-            b = matches[0]
+        matches = manual or explicit or bounded
+        identities = {(b['role'], b.get('task'), b.get('project')) for b in matches}
+        if len(identities) == 1:
+            b = next((b for b in matches if b.get('origin') == 'pi-launch'), matches[0])
             f.update(project=b.get('project'), task=b.get('task'), task_record=b.get('task_record'))
             if f['role'] == 'unassigned':
                 f.update(role=b['role'], evidence=b['evidence'])
@@ -595,11 +674,11 @@ def launch_agent(args, home):
     if not cli:
         raise SystemExit('quota-axi must be on PATH before install')
     env = {'FM_HOME': str(home), 'PATH': os.pathsep.join(dict.fromkeys([str(Path(cli).parent), str(Path(shutil.which('python3')).parent), '/usr/bin', '/bin']))}
-    for key in ['FM_DATA_OVERRIDE', 'FM_STATE_OVERRIDE', 'PI_CODING_AGENT_DIR', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'NM_HOME']:
+    for key in ['FM_DATA_OVERRIDE', 'FM_STATE_OVERRIDE', 'FM_PROJECTS_OVERRIDE', 'PI_CODING_AGENT_DIR', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'NM_HOME']:
         if os.environ.get(key):
             env[key] = str(Path(os.environ[key]).expanduser().resolve())
     arguments = [str(HERE/'fm-usage-report.sh'), 'refresh']
-    for option in ['pi_root', 'supervision_root', 'claude_root', 'codex_root', 'nm_db', 'output']:
+    for option in ['pi_root', 'supervision_root', 'claude_root', 'codex_root', 'nm_db', 'output', 'task_data_root']:
         value = getattr(args, option)
         for path_value in value if isinstance(value, list) else ([value] if value else []):
             arguments.extend(['--' + option.replace('_', '-'), str(path_value.resolve())])
@@ -627,6 +706,7 @@ def main():
     parser.add_argument('--claude-root', type=Path, action='append', help='Claude projects JSONL root')
     parser.add_argument('--codex-root', type=Path, action='append', help='Codex JSONL root')
     parser.add_argument('--nm-db', type=Path, help='Read-only no-mistakes state.sqlite')
+    parser.add_argument('--task-data-root', type=Path, help='Firstmate backlog and project registry root (default: FM_HOME/data, independent of report output)')
     parser.add_argument('--output', type=Path, help='Private offline HTML destination')
     parser.add_argument('--launch-agents', type=Path, default=Path.home()/'Library/LaunchAgents')
     parser.add_argument('--source', choices=['pi', 'claude', 'codex-compaction', 'codex-cumulative'])
@@ -636,7 +716,9 @@ def main():
     os.umask(0o077)
     home = Path(os.environ['FM_HOME']).resolve()
     data = Path(os.environ.get('FM_DATA_OVERRIDE', home/'data')) / 'usage-report'
-    state_root = Path(os.environ.get('FM_STATE_OVERRIDE', home/'state'))
+    state_root = Path(os.environ.get('FM_STATE_OVERRIDE', home/'state')).resolve()
+    task_data_root = args.task_data_root or home/'data'
+    projects_root = Path(os.environ.get('FM_PROJECTS_OVERRIDE', home/'projects'))
     if args.command in ['install', 'uninstall']:
         launch_agent(args, home)
         return
@@ -652,6 +734,7 @@ def main():
                                            evidence='Explicit role binding supplied to fm-usage-report bind'))
         if args.command in ['import', 'refresh']:
             capture_tasks(store, state_root, now)
+            catalog = task_catalog(task_data_root, projects_root)
             pi_agent = Path(os.environ.get('PI_CODING_AGENT_DIR', Path.home()/'.pi/agent'))
             roots = [('pi', args.pi_root or [pi_agent/'sessions'], False),
                      ('pi', args.supervision_root or [state_root/'branch-session'], True),
@@ -661,7 +744,7 @@ def main():
                 for root in dirs:
                     for path in sorted(root.rglob('*.jsonl')):
                         if not path.is_symlink():
-                            import_file(store, path, source, supervision)
+                            import_file(store, path, source, supervision, home, state_root, catalog)
         nm_path = args.nm_db or Path(os.environ.get('NM_HOME', Path.home()/'.no-mistakes'))/'state.sqlite'
         # Refresh closed invocations too: a native log can arrive before its
         # invocation completes; recompute overlap from the ledger every time.
@@ -671,10 +754,10 @@ def main():
             except sqlite3.Error:
                 store.warn(nm_path, 'No-mistakes schema unavailable; import incomplete')
         if args.command in ['sample', 'refresh']:
-            sampled_facts, _ = attributed(store, store.rows('facts'), runs, links)
+            sampled_facts, _ = attributed(store, store.rows('facts'), runs, links, home)
             sample(store, now, sampled_facts)
         if args.command in ['report', 'refresh']:
-            facts, excluded = attributed(store, store.rows('facts'), runs, links)
+            facts, excluded = attributed(store, store.rows('facts'), runs, links, home)
             output = args.output or data/'index.html'
             payload = build_report(store, facts, excluded, output, now)
             print(f'Report: {output} ({len(payload["facts"])} accounting facts; private)')

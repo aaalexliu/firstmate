@@ -807,7 +807,11 @@ The report discloses these limits and never claims exact per-session quota use.
 
 Only accounting fields and source locators persist, never transcript text, credentials, or account identifiers.
 Multiple quota lanes, stale readings, unknown window bounds, and reads that would need permission stay unavailable instead of combining accounts or prompting.
-Task bindings retain metadata seen during imports; historical pooled copies without a proven binding stay unassigned.
+Primary Pi sessions whose recorded cwd is the Firstmate home are main chat; the separate supervision store keeps its own role.
+Each response's provider and model remain authoritative, regardless of the current configured model pin.
+Worker bindings also use typed Firstmate launch contracts in native Pi sessions and retained backlog kind/project records, so a reused pool path or removed task metadata does not erase a proven native-session binding.
+The importer keeps only the task binding, never the launch message text.
+Historical pooled copies without such evidence stay unassigned.
 Compactions without a producing model remain unknown; unsupported compressed logs are not imported.
 The Codex adapter follows advancing cumulative snapshots and separately matched compaction records; inherited fork-time bursts become baselines rather than new usage.
 `tests/fm-usage-report.test.sh` exercises the public CLI against synthetic sources, quota readings, and a temporary LaunchAgents directory.

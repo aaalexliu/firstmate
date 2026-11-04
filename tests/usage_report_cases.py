@@ -34,7 +34,7 @@ class UsageReport(unittest.TestCase):
         self.nm = self.root/'nm.sqlite'
         self.output = self.root/'report.html'
         self.env = dict(os.environ, FM_HOME=str(self.home))
-        for key in ['FM_DATA_OVERRIDE', 'FM_STATE_OVERRIDE']:
+        for key in ['FM_DATA_OVERRIDE', 'FM_STATE_OVERRIDE', 'FM_PROJECTS_OVERRIDE']:
             self.env.pop(key, None)
         self.fakebin = self.root/'fakebin'
         self.fakebin.mkdir()
@@ -131,6 +131,94 @@ class UsageReport(unittest.TestCase):
         self.write('pi',self.pi('ordinary'))
         self.cli('import')
         self.assertEqual({f['role'] for f in self.records()},{'supervision','unassigned'})
+
+    def test_home_main_sessions_include_history_but_not_supervision_or_workers(self):
+        self.write('pi',self.pi('past-main',ts=self.now-14*86400,cwd=str(self.home)),'past.jsonl')
+        self.write('pi',self.pi('current-main',cwd=str(self.home)),'current.jsonl')
+        self.write('pi',self.pi('unknown-worker',cwd='/synthetic/pool/1/project'),'worker.jsonl')
+        self.write('supervision',self.pi('branch',cwd=str(self.home)))
+        self.cli('import')
+        roles={f['session']:f['role'] for f in self.report()['facts']}
+        self.assertEqual(roles,{'past-main':'main chat','current-main':'main chat',
+                                'unknown-worker':'unassigned','branch':'supervision'})
+
+    def test_branch_uses_each_response_provider_model_not_parent_labels_or_current_pin(self):
+        config=self.home/'config';config.mkdir()
+        (config/'supervision-branch-model').write_text('openai/gpt-6.1-sol\n')
+        rows=self.pi('branch',cwd=str(self.home))
+        rows.insert(1,dict(type='model_change',provider='anthropic',modelId='claude-opus-5-5'))
+        response=dict(rows[-1])
+        response['id']='openai-entry'
+        response['provider']='anthropic'  # Envelope / selected-model labels are not usage evidence.
+        response['model']='claude-opus-5-5'
+        response['message']=dict(rows[-1]['message'],provider='openai',model='gpt-6.1-sol',responseId='openai-response')
+        rows.append(response)
+        self.write('supervision',rows)
+        self.cli('import')
+        facts=self.report()['facts']
+        self.assertEqual({(f['provider'],f['model'],f['role']) for f in facts},
+            {('claude','claude-opus-5-5','supervision'),('codex','gpt-6.1-sol','supervision')})
+        claude=next(f for f in facts if f['provider']=='claude')
+        codex=next(f for f in facts if f['provider']=='codex')
+        self.assertAlmostEqual(claude['priced'],(100*4+200*.2+7*5+3*8+30*20)/1e6)
+        self.assertAlmostEqual(codex['priced'],(100*2+200*.1+10*2.5+30*10)/1e6)
+
+    def test_historical_worker_launch_bindings_survive_cleanup_and_pool_reuse(self):
+        data=self.home/'data';data.mkdir()
+        (self.home/'projects/fixture').mkdir(parents=True)
+        (data/'projects.md').write_text('- fixture [no-mistakes] - Fixture project\n')
+        (data/'backlog.md').write_text('- [x] old-worker - Old task (repo: fixture) (kind: ship)\n'
+            '- [ ] new-scout - New task (repo: fixture) (kind: scout)\n')
+        cwd='/synthetic/pool/1/fixture'
+        state_root=self.home/'state'
+        metadata=state_root/'old-worker.meta'
+        metadata.write_text(f'worktree={cwd}\nproject={self.home.resolve()}/projects/fixture\nkind=ship\n'
+            f'spawn_gen=s{int(self.now-10100)}.1.1\nsession_id=old-session\n')
+        for sid,task,ts in [('old-session','old-worker',self.now-10000),('new-session','new-scout',self.now-100)]:
+            rows=self.pi(sid,ts=ts,cwd=cwd,model='gpt-6.1-sol')
+            rows[1]['message']['provider']='openai'
+            body='\u2063FIRSTMATE_OP: v1 launch-brief: # Current worker role contract\n'
+            body+=f'Your steering inbox is `{self.home}/state/{task}.inbox`; this exact path belongs to this task.\nSECRET_WORKER_PROMPT'
+            rows.insert(1,dict(type='message',timestamp=iso(ts-99),message=dict(role='user',content=body)))
+            self.write('pi',rows,sid+'.jsonl')
+        peer=self.pi('unbound-peer',ts=self.now-5000,cwd=cwd,model='gpt-6.1-sol')
+        peer[-1]['message']['provider']='openai'
+        self.write('pi',peer,'peer.jsonl')
+        inherited=self.pi('inherited-child',ts=self.now,cwd=cwd,model='gpt-6.1-sol')
+        inherited[-1]['message']['provider']='openai'
+        inherited.insert(1,dict(type='message',timestamp=iso(self.now-10000),message=dict(role='user',content=
+            f'FIRSTMATE_OP: v1 launch-brief: copied parent\nYour steering inbox is `{self.home}/state/old-worker.inbox`; copied launch.')))
+        self.write('pi',inherited,'inherited.jsonl')
+        self.cli('import')
+        facts={f['session']:f for f in self.report()['facts']}
+        self.assertEqual(facts['unbound-peer']['role'],'unassigned')
+        self.assertEqual(facts['inherited-child']['role'],'unassigned')
+        self.assertEqual(len(self.records('bindings')),3)
+        self.assertEqual((facts['old-session']['role'],facts['old-session']['task']),('worker','old-worker'))
+        self.assertEqual((facts['new-session']['role'],facts['new-session']['task']),('scout','new-scout'))
+        self.assertEqual(facts['old-session']['project'],str(self.home.resolve()/'projects/fixture'))
+        before=self.records()
+        # A v1 database already has complete cursors but lacks launch bindings.
+        with sqlite3.connect(data/'usage-report/usage.sqlite') as db:
+            for key, encoded in db.execute('SELECT key,data FROM bindings').fetchall():
+                if json.loads(encoded).get('origin')=='pi-launch':
+                    db.execute('DELETE FROM bindings WHERE key=?',(key,))
+            for path, encoded in db.execute('SELECT path,state FROM cursors').fetchall():
+                state=json.loads(encoded);state.pop('parser_version',None)
+                db.execute('UPDATE cursors SET state=? WHERE path=?',(json.dumps(state),path))
+        self.cli('import')
+        self.assertEqual(len(self.records()),len(before))
+        self.assertEqual(next(f for f in self.report()['facts'] if f['session']=='old-session')['role'],'worker')
+        self.assertEqual(next(f for f in self.report()['facts'] if f['session']=='new-session')['role'],'scout')
+        metadata.unlink()
+        (data/'backlog.md').unlink()
+        self.cli('import')
+        self.assertEqual(self.records(),before)
+        self.assertEqual(next(f for f in self.report()['facts'] if f['session']=='old-session')['role'],'worker')
+        self.assertNotIn('SECRET_WORKER_PROMPT',json.dumps(self.records('bindings')))
+        with sqlite3.connect(data/'usage-report/usage.sqlite') as db:
+            cursors=[json.loads(r[0]) for r in db.execute('SELECT state FROM cursors')]
+        self.assertNotIn('SECRET_WORKER_PROMPT',json.dumps(cursors))
 
     def test_claude_fragments_max_counters_not_line_sum(self):
         rows=[]
@@ -383,7 +471,9 @@ class UsageReport(unittest.TestCase):
 
     def test_launchd_install_uninstall_no_load(self):
         directory=self.root/'LaunchAgents'
-        self.cli('install','--launch-agents',str(directory))
+        self.env['FM_PROJECTS_OVERRIDE']=str(self.root/'registered-projects')
+        task_data=self.root/'task-records'
+        self.cli('install','--launch-agents',str(directory),'--task-data-root',str(task_data))
         path=next(directory.glob('*.plist'))
         definition=plistlib.loads(path.read_bytes())
         self.assertEqual(definition['StartInterval'],3600)
@@ -392,6 +482,9 @@ class UsageReport(unittest.TestCase):
         self.assertEqual(definition['ProgramArguments'][pi_option+1],str(self.roots['pi'].resolve()))
         self.assertIn('--nm-db',definition['ProgramArguments'])
         self.assertEqual(definition['EnvironmentVariables']['FM_HOME'],str(self.home.resolve()))
+        self.assertEqual(definition['EnvironmentVariables']['FM_PROJECTS_OVERRIDE'],str((self.root/'registered-projects').resolve()))
+        task_option=definition['ProgramArguments'].index('--task-data-root')
+        self.assertEqual(definition['ProgramArguments'][task_option+1],str(task_data.resolve()))
         self.assertNotIn('SECRET',str(definition))
         self.cli('uninstall','--launch-agents',str(directory))
         self.assertFalse(path.exists())
