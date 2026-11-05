@@ -66,12 +66,7 @@ def atomic(path, data):
 
 
 class Store:
-    def __init__(self, path, readonly=False):
-        self.readonly = readonly
-        if readonly:
-            self.db = sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=30)
-            self.db.row_factory = sqlite3.Row
-            return
+    def __init__(self, path):
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.db = sqlite3.connect(path, timeout=30)
         self.db.row_factory = sqlite3.Row
@@ -425,13 +420,6 @@ def nm_tokens(row):
     return fresh, cached, write, values['output']
 
 
-def nm_context(db):
-    runs = {r['id']: dict(r) for r in db.execute(
-        'SELECT id, repo_id, branch, worktree_dir, created_at, updated_at FROM runs')}
-    links = [dict(r) for r in db.execute('SELECT run_id, agent, session_id FROM run_agent_sessions')]
-    return runs, links
-
-
 def import_nm(store, path):
     if not path.exists():
         store.warn(path, 'No-mistakes ledger absent')
@@ -439,8 +427,10 @@ def import_nm(store, path):
     with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
         db.row_factory = sqlite3.Row
         db.execute('BEGIN')
-        runs, links = nm_context(db)
+        runs = {r['id']: dict(r) for r in db.execute(
+            'SELECT id, repo_id, branch, worktree_dir, created_at, updated_at FROM runs')}
         repos = {r['id']: r['working_path'] for r in db.execute('SELECT id, working_path FROM repos')}
+        links = [dict(r) for r in db.execute('SELECT run_id, agent, session_id FROM run_agent_sessions')]
         logs = {}
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='step_results'").fetchone():
             logs = {(r['run_id'], r['step_name']): r['log_path'] for r in db.execute(
@@ -633,7 +623,7 @@ def rate_fit(store, facts, snapshots, now):
                    fitted_at=now, price_version=PRICES['version'])
         # Do not freeze the cold-start seed for a week: switch as soon as enough
         # pairs exist, then hold that measured fit until the next weekly refit.
-        if measured and not store.readonly:
+        if measured:
             store.put('fits', f'{provider}:{week}', fit)
         fits[provider] = fit
     return fits
@@ -679,6 +669,7 @@ def build_report(store, facts, excluded, output, now):
     text = json.dumps(payload, separators=(',', ':'), ensure_ascii=True).replace('<', '\\u003c').replace('&', '\\u0026')
     template = (HERE / 'usage-report.html').read_text()
     atomic(output, re.sub(r'/\*ACCOUNTING_DATA\*/\s*null', lambda _: text, template).encode())
+    atomic(output.with_name('summary.txt'), (text_report(payload) + '\n').encode())
     return payload
 
 
@@ -714,7 +705,8 @@ def text_report(payload):
             and window['allocation_rate'] is not None and (not session['unpriced'] or session['priced'] > 0) else None)
         session['partial_quota'] = session['unpriced'] and session['priced'] > 0
 
-    lines = ['Local usage (UTC; quota shares are estimates)']
+    generated = dt.datetime.fromtimestamp(payload['generated'], dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    lines = [f'Local usage generated {generated} (quota shares are estimates)']
     for window in payload['windows']:
         provider = window['provider']
         rows = [s for s in sessions.values() if s['provider'] == provider]
@@ -787,14 +779,14 @@ def main():
         'Run refresh hourly via launchd after reviewing the printed bootstrap command. '
         'Source overrides replace defaults and support isolated fixtures.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('command', choices=['import', 'report', 'text', 'sample', 'refresh', 'install', 'uninstall'],
-        help='text prints existing accounting only: no import, quota sampling, HTML, or store writes; refresh updates first')
+        help='text prints the saved summary.txt: no import, sampling, or writes; report/refresh render HTML and text together')
     parser.add_argument('--pi-root', type=Path, action='append', help='Pi JSONL root (repeatable)')
     parser.add_argument('--supervision-root', type=Path, action='append', help='Supervision JSONL root (repeatable)')
     parser.add_argument('--claude-root', type=Path, action='append', help='Claude projects JSONL root')
     parser.add_argument('--codex-root', type=Path, action='append', help='Codex JSONL root')
     parser.add_argument('--nm-db', type=Path, help='Read-only no-mistakes state.sqlite')
     parser.add_argument('--task-data-root', type=Path, help='Firstmate backlog and project registry root (default: FM_HOME/data, independent of report output)')
-    parser.add_argument('--output', type=Path, help='Private offline HTML destination')
+    parser.add_argument('--output', type=Path, help='Private HTML destination; summary.txt beside it is also written (or read by text)')
     parser.add_argument('--now', type=float, help='Fixed Unix time for deterministic accounting replay')
     parser.add_argument('--launch-agents', type=Path, default=Path.home()/'Library/LaunchAgents')
     args = parser.parse_args()
@@ -809,12 +801,14 @@ def main():
     if args.command in ['install', 'uninstall']:
         launch_agent(args, home)
         return
-    try:
-        store = Store(data/'usage.sqlite', readonly=args.command == 'text')
-    except sqlite3.OperationalError:
-        if args.command == 'text':
-            parser.exit(1, 'No readable usage store; run fm-usage-report.sh refresh first.\n')
-        raise
+    if args.command == 'text':
+        summary = (args.output or data/'index.html').with_name('summary.txt')
+        try:
+            print(summary.read_text(), end='')
+        except FileNotFoundError:
+            parser.exit(1, 'No saved usage summary; run fm-usage-report.sh refresh first.\n')
+        return
+    store = Store(data/'usage.sqlite')
     now = args.now if args.now is not None else time.time()
     runs, links = [], []
     with store.db:
@@ -839,33 +833,6 @@ def main():
                 runs, links = import_nm(store, nm_path)
             except sqlite3.Error:
                 store.warn(nm_path, 'No-mistakes schema unavailable; import incomplete')
-        if args.command == 'text':
-            # Reconcile overlap metadata without importing invocation accounting.
-            stored_facts = store.rows('facts')
-            run_ends, run_sessions = {}, {}
-            for fact in stored_facts:
-                if fact['source'] != 'no-mistakes':
-                    continue
-                run_id = fact['run']
-                run_ends[run_id] = max(run_ends.get(run_id, 0), fact['end'])
-                sessions = run_sessions.setdefault(run_id, set())
-                sessions.update(fact.get('native_sessions', []))
-                if fact.get('session_key'):
-                    sessions.add(fact['session_key'])
-            try:
-                with closing(sqlite3.connect(nm_path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
-                    db.row_factory = sqlite3.Row
-                    db.execute('BEGIN')
-                    run_map, live_links = nm_context(db)
-                    runs = [dict(run, updated_at=min(stamp(run['updated_at']) or 0, run_ends[str(run_id)]))
-                            for run_id, run in run_map.items() if str(run_id) in run_ends]
-                    links = [link for link in live_links
-                             if link['session_id'] in run_sessions.get(str(link['run_id']), set())]
-            except sqlite3.Error:
-                runs, links = [], []
-                print('Overlap reconciliation skipped: no readable no-mistakes ledger.')
-            facts, excluded = attributed(store, stored_facts, runs, links, home)
-            print(text_report(report_data(store, facts, excluded, now)))
         if args.command in ['sample', 'refresh']:
             sampled_facts, _ = attributed(store, store.rows('facts'), runs, links, home)
             sample(store, now, sampled_facts)
@@ -875,7 +842,7 @@ def main():
             render_now = now if args.now is not None else time.time()
             payload = build_report(store, facts, excluded, output, render_now)
             print(f'Report: {output} ({len(payload["facts"])} accounting facts; private)')
-        elif args.command != 'text':
+        else:
             print(f'{args.command}: accounting records saved')
     store.db.close()
 

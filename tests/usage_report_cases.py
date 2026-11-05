@@ -589,6 +589,10 @@ class UsageReport(unittest.TestCase):
         self.assertTrue(result.isascii())
         self.assertLess(len(result.splitlines()),40)
         self.assertNotIn('\x1b',result)
+        self.assertEqual(result,(self.output.parent/'summary.txt').read_text())
+        self.assertEqual(result.splitlines()[0],
+            'Local usage generated '+dt.datetime.fromtimestamp(report['generated'],dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')+
+            ' (quota shares are estimates)')
         for window in report['windows']:
             if not window['available']:
                 self.assertIn('Grok: quota unavailable; last 7 days, 0 tokens',result)
@@ -626,10 +630,8 @@ class UsageReport(unittest.TestCase):
         after=self.cli('text','--now',str(self.now)).stdout
         self.assertEqual(after,before)
 
-    def test_text_bounds_existing_run_overlap_to_stored_invocations(self):
+    def test_text_preserves_render_time_exclusions_after_ledger_changes(self):
         self.nm_db()
-        with sqlite3.connect(self.nm) as db:
-            db.execute('UPDATE runs SET updated_at=?',(self.now-100,))
         for sid,cwd,ts in [('possible','/synthetic/review',self.now-150),
                            ('later','/synthetic/review',self.now-50),
                            ('new-link',str(self.home),self.now-50),
@@ -637,36 +639,55 @@ class UsageReport(unittest.TestCase):
             self.write('pi',self.pi(sid,cwd=cwd,ts=ts),sid+'.jsonl')
         self.cli('refresh','--now',str(self.now))
         report=self.rendered_report()
-        self.assertEqual(report['excluded']['possible_pipeline'],1)
+        self.assertEqual(report['excluded']['possible_pipeline'],2)
         self.assertEqual(report['excluded']['native_pipeline'],1)
         before=self.cli('text','--now',str(self.now)).stdout
-        self.assertIn('later',before)
+        self.assertNotIn('later',before)
         self.assertIn('new-link',before)
         self.assertNotIn('possible',before)
         store=self.home/'data/usage-report/usage.sqlite'
         stored=store.read_bytes()
         html=self.output.read_bytes()
         with sqlite3.connect(self.nm) as db:
-            db.execute('UPDATE runs SET updated_at=?',(self.now,))
+            db.execute('UPDATE runs SET created_at=?,updated_at=?,worktree_dir=?',
+                (self.now-2000,self.now+500,str(self.home)))
             db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('run1','pi','new-link'))
         after=self.cli('text','--now',str(self.now)).stdout
         self.assertEqual(after,before)
         self.assertEqual(store.read_bytes(),stored)
         self.assertEqual(self.output.read_bytes(),html)
 
-    def test_text_discloses_unavailable_overlap_reconciliation(self):
-        self.nm_db()
-        self.write('pi',self.pi('possible',cwd='/synthetic/review',ts=self.now-150))
+    def test_text_preserves_active_and_other_agent_link_exclusions(self):
+        self.nm_db(completed=False)
+        for sid in ['native-review','other-agent','main']:
+            self.write('pi',self.pi(sid,cwd=str(self.home)),sid+'.jsonl')
+        with sqlite3.connect(self.nm) as db:
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('run1','codex','other-agent'))
         self.cli('refresh','--now',str(self.now))
-        store=self.home/'data/usage-report/usage.sqlite'
-        stored=store.read_bytes()
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['native_pipeline'],2)
+        before=self.cli('text').stdout
+        self.assertIn('main chat: 30.00% (1)',before)
+        self.assertNotIn('native-revie',before)
+        self.assertNotIn('other-agent',before)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('UPDATE agent_invocations SET completed_at=?',(self.now-100,))
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['native_pipeline'],2)
+        window=next(w for w in report['windows'] if w['provider']=='claude')
+        fact=next(f for f in report['facts'] if f['session']=='main')
+        result=self.cli('text').stdout
+        self.assertIn(f"main chat: {fact['priced']*window['allocation_rate']:.2f}% (1)",result)
+        self.assertNotIn('other-agent',result)
+        # Reading the saved summary needs neither the store nor a usable live ledger.
+        expected=result
         with sqlite3.connect(self.nm) as db:
             db.execute('DROP TABLE run_agent_sessions')
-        result=self.cli('text','--now',str(self.now)).stdout
-        self.assertEqual(result.count('Overlap reconciliation skipped:'),1)
-        self.assertIn('possible',result)
-        self.assertIn('Claude: 30.00% used',result)
-        self.assertEqual(store.read_bytes(),stored)
+        (self.home/'data/usage-report/usage.sqlite').unlink()
+        self.assertEqual(self.cli('text').stdout,expected)
+        self.nm.unlink()
+        self.assertEqual(self.cli('text').stdout,expected)
 
     def test_text_is_readonly_and_does_not_import_sample_or_render(self):
         self.nm_db()
@@ -684,19 +705,10 @@ class UsageReport(unittest.TestCase):
         self.assertEqual(store.read_bytes(),before)
         self.assertEqual(store.stat().st_mode,mode)
         self.assertEqual(self.output.read_bytes(),html)
-        # Enough hourly pairs to fit a rate must not write that fit during text rendering.
-        for i in range(5):
-            t=self.now-(5-i)*3600
-            self.write('pi',self.pi(str(i),ts=t+600),str(i)+'.jsonl')
-            self.quota_file.write_text(json.dumps(dict(generatedAt=iso(t),providers=[dict(provider='claude',
-                state=dict(status='fresh'),windows=[dict(id='weekly',kind='weekly',
-                resetsAt=iso(self.now+86400),percentRemaining=90-i*2)])])))
-            self.cli('sample','--now',str(t))
-        self.cli('import')
-        before=store.read_bytes()
-        self.cli('text','--now',str(self.now))
-        self.assertEqual(store.read_bytes(),before)
-        self.assertEqual(self.records('fits'),[])
+        summary=self.output.parent/'summary.txt'
+        self.assertEqual(summary.stat().st_mode & 0o777,0o600)
+        self.assertEqual(result,summary.read_text())
+        self.assertEqual(self.cli('text','--now',str(self.now+86400)).stdout,result)
 
     def test_text_partial_unknown_fallback_and_top_ten(self):
         for i in range(12):
@@ -730,20 +742,28 @@ class UsageReport(unittest.TestCase):
         tokens=[int(line.split()[0].replace(',','')) for line in top]
         self.assertEqual(tokens,sorted(tokens,reverse=True))
         self.assertIn('Unknown',result)
-        fallback=self.cli('text','--now',str(self.now+3*3600)).stdout
+        self.cli('report','--now',str(self.now+3*3600))
+        fallback=self.cli('text').stdout
         self.assertIn('Claude: quota unavailable; last 7 days,',fallback)
         self.assertNotIn('30.00% used',fallback)
         self.assertIn('outside-wind',fallback)
 
-    def test_text_missing_store_and_empty_store(self):
+    def test_text_missing_summary_and_empty_report(self):
         with self.assertRaises(subprocess.CalledProcessError) as error:
             self.cli('text')
         self.assertIn('run fm-usage-report.sh refresh first',error.exception.stderr)
         self.assertFalse((self.home/'data').exists())
         self.cli('import')
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.cli('text')
+        self.cli('report')
         result=self.cli('text').stdout
         self.assertIn('No sessions in these windows.',result)
         self.assertEqual(result.count('quota unavailable; last 7 days, 0 tokens'),3)
+        # Default paths use the summary next to the default HTML, not --output's directory.
+        subprocess.run([str(CLI),'report','--nm-db',str(self.nm)],env=self.env,capture_output=True,check=True)
+        default=subprocess.run([str(CLI),'text'],env=self.env,capture_output=True,text=True,check=True)
+        self.assertEqual(default.stdout,(self.home/'data/usage-report/summary.txt').read_text())
 
     def test_launchd_install_uninstall_no_load(self):
         directory=self.root/'LaunchAgents'

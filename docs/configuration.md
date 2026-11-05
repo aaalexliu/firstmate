@@ -786,8 +786,8 @@ The flag is a home-local preference and is not inherited by secondmate homes.
 
 ## Local usage report
 
-`bin/fm-usage-report.sh` imports local accounting into `data/usage-report/usage.sqlite` and renders `data/usage-report/index.html` under the effective `FM_HOME` (or `FM_DATA_OVERRIDE`).
-Both files and the text output are private; the files are gitignored.
+`bin/fm-usage-report.sh` imports local accounting into `data/usage-report/usage.sqlite` and renders `data/usage-report/index.html` with a companion `summary.txt` under the effective `FM_HOME` (or `FM_DATA_OVERRIDE`).
+All three files and the text output are private; the files are gitignored.
 Do not publish real usage output or serve that directory.
 The offline report shows each provider's current supported quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
 Supported quota scopes are weekly windows and bounded credits windows; without a usable reading, that provider shows the last seven days of local tokens and role token shares instead of quota estimates.
@@ -797,9 +797,10 @@ Unknown attribution remains unassigned.
 
 The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, quota sampling, and launchd definition commands.
 Its `refresh` command imports, samples through `quota-axi` without credential refresh or permission prompts, and renders the report.
-Its `text` command prints a compact plain-text overview and the top ten sessions using the same stored accounting, window selection, and quota allocation as the HTML.
-It does not import usage, sample quota, write the store, or render HTML; run `refresh` first when fresh data is needed.
-Text may read no-mistakes run/session metadata to reconcile overlap, but never imports invocation usage.
+Its `report` and `refresh` commands write the HTML and compact text summary from the same in-memory accounting, exclusions, windows, and quota allocation.
+Its `text` command prints that saved summary with its generation time, provider overview, and top ten sessions.
+It reads only the summary file, not the store or live ledger, so numbers stay aligned with the last render even when source data changes.
+Run `refresh` first when fresh data is needed or the summary is missing.
 Role rows show nonzero estimated quota shares and session counts; unavailable providers retain the seven-day token fallback, and asterisks flag incomplete coverage.
 Its `install` and `uninstall` commands only write and remove a home-specific user-agent definition; they never load or unload it.
 Review and run the printed `launchctl` command yourself to enable the hourly job, or unload it before uninstalling.
