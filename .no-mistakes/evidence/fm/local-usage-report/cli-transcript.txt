@@ -1,0 +1,65 @@
+$ fm-usage-report.sh refresh --now 1793842642
+Report: {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/report.html (10 accounting facts; private)
+
+$ fm-usage-report.sh import 
+import: accounting records saved
+
+$ fm-usage-report.sh report --now 1793842642
+Report: {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/report.html (10 accounting facts; private)
+
+$ fm-usage-report.sh install --launch-agents {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/LaunchAgents
+Wrote definition only; no launchctl command executed: {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/LaunchAgents/local.firstmate.usage.bc1bbc988695.plist
+To load after review: launchctl bootstrap gui/$(id -u) {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/LaunchAgents/local.firstmate.usage.bc1bbc988695.plist
+To unload before uninstall: launchctl bootout gui/$(id -u)/local.firstmate.usage.bc1bbc988695
+
+Generated scheduler definition: {
+  "EnvironmentVariables": {
+    "FM_HOME": "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home",
+    "NM_HOME": "~/.no-mistakes",
+    "PATH": "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/fakebin:/usr/bin:/bin"
+  },
+  "Label": "local.firstmate.usage.bc1bbc988695",
+  "ProcessType": "Background",
+  "ProgramArguments": [
+    "{run-worktree}/bin/fm-usage-report.sh",
+    "refresh",
+    "--pi-root",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi",
+    "--supervision-root",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/supervision",
+    "--claude-root",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/claude",
+    "--codex-root",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/codex",
+    "--nm-db",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/nm.sqlite",
+    "--output",
+    "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/report.html"
+  ],
+  "StartInterval": 3600
+}
+$ fm-usage-report.sh uninstall --launch-agents {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/LaunchAgents
+Removed definition only; no launchctl command executed: {run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/LaunchAgents/local.firstmate.usage.bc1bbc988695.plist
+
+Observed accounting: {
+  "facts": 10,
+  "roles": {
+    "main-large": "main chat",
+    "main-small": "main chat",
+    "worker-demo": "worker",
+    "grok-session": "unassigned",
+    "unproven": "unassigned",
+    "unknown-model": "unassigned",
+    "outside-window": "unassigned",
+    "</script><script>window.INJECTED=1</script>": "unassigned",
+    "supervisor": "supervision",
+    "nm:native-review": "reviewer"
+  },
+  "excluded": {
+    "native_pipeline": 1,
+    "possible_pipeline": 0,
+    "possible_records": []
+  },
+  "claude_allocated_percent": 30,
+  "codex_allocated_percent": 30
+}

@@ -1,0 +1,875 @@
+$ chrome-devtools-axi open file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html
+page:
+  title: Local usage report
+  url: "file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html"
+  refs: 262
+snapshot:
+uid=g11:11_0 RootWebArea "Local usage report" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html"
+  uid=g11:11_1 main
+    uid=g11:11_2 "PRIVATE · ON THIS MACHINE · UTC"
+    uid=g11:11_3 heading "Local usage report" level="1"
+    uid=g11:11_4 "Quota estimates by role, with a direct path to each session."
+    uid=g11:11_5 heading "Claude Seeded / low confidence" level="2"
+    uid=g11:11_6 "2026-11-04 01:37 UTC"
+    uid=g11:11_7 LineBreak "
+"
+    uid=g11:11_8 "to 2026-11-11 01:37 UTC · week"
+    uid=g11:11_9 "30.00% used"
+    uid=g11:11_10 "70.00% left · account-wide reading"
+    uid=g11:11_11 "ROLE"
+    uid=g11:11_12 "EST. QUOTA"
+    uid=g11:11_13 "SESSIONS"
+    uid=g11:11_14 link "main chat" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=main+chat"
+    uid=g11:11_16 "21.18%"
+    uid=g11:11_17 "1"
+    uid=g11:11_18 link "supervision" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=supervision"
+    uid=g11:11_20 "7.12%"
+    uid=g11:11_21 "1"
+    uid=g11:11_22 link "worker" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=worker"
+    uid=g11:11_24 "0.00%"
+    uid=g11:11_25 "0"
+    uid=g11:11_26 link "scout" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=scout"
+    uid=g11:11_28 "0.00%"
+    uid=g11:11_29 "0"
+    uid=g11:11_30 link "reviewer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=reviewer"
+    uid=g11:11_32 "0.04%"
+    uid=g11:11_33 "1"
+    uid=g11:11_34 link "fixer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=fixer"
+    uid=g11:11_36 "0.00%"
+    uid=g11:11_37 "0"
+    uid=g11:11_38 link "helper subagents" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=helper+subagents"
+    uid=g11:11_40 "0.00%"
+    uid=g11:11_41 "0"
+    uid=g11:11_42 link "other automation" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=other+automation"
+    uid=g11:11_44 "0.00%"
+    uid=g11:11_45 "0"
+    uid=g11:11_46 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+    uid=g11:11_48 "1.67% *"
+    uid=g11:11_49 "2"
+    uid=g11:11_50 "0.0741 percentage points / API-priced $1"
+    uid=g11:11_51 LineBreak "
+"
+    uid=g11:11_52 "0 usable hourly pairs · seed / not yet measured"
+    uid=g11:11_53 LineBreak "
+"
+    uid=g11:11_54 "Window scaling ×578.621"
+    uid=g11:11_55 LineBreak "
+"
+    uid=g11:11_56 "1 unpriced or partial facts"
+    uid=g11:11_57 heading "Codex Uncalibrated" level="2"
+    uid=g11:11_58 "2026-11-04 01:37 UTC"
+    uid=g11:11_59 LineBreak "
+"
+    uid=g11:11_60 "to 2026-11-11 01:37 UTC · week"
+    uid=g11:11_61 "30.00% used"
+    uid=g11:11_62 "70.00% left · account-wide reading"
+    uid=g11:11_63 "ROLE"
+    uid=g11:11_64 "EST. QUOTA"
+    uid=g11:11_65 "SESSIONS"
+    uid=g11:11_66 link "main chat" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=main+chat"
+    uid=g11:11_68 "0.76%"
+    uid=g11:11_69 "1"
+    uid=g11:11_70 link "supervision" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=supervision"
+    uid=g11:11_72 "0.00%"
+    uid=g11:11_73 "0"
+    uid=g11:11_74 link "worker" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=worker"
+    uid=g11:11_76 "29.24%"
+    uid=g11:11_77 "1"
+    uid=g11:11_78 link "scout" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=scout"
+    uid=g11:11_80 "0.00%"
+    uid=g11:11_81 "0"
+    uid=g11:11_82 link "reviewer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=reviewer"
+    uid=g11:11_84 "0.00%"
+    uid=g11:11_85 "0"
+    uid=g11:11_86 link "fixer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=fixer"
+    uid=g11:11_88 "0.00%"
+    uid=g11:11_89 "0"
+    uid=g11:11_90 link "helper subagents" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=helper+subagents"
+    uid=g11:11_92 "0.00%"
+    uid=g11:11_93 "0"
+    uid=g11:11_94 link "other automation" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=other+automation"
+    uid=g11:11_96 "0.00%"
+    uid=g11:11_97 "0"
+    uid=g11:11_98 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+    uid=g11:11_100 "0.00%"
+    uid=g11:11_101 "0"
+    uid=g11:11_102 "No published seed; relative price weights only"
+    uid=g11:11_103 LineBreak "
+"
+    uid=g11:11_104 "0 usable hourly pairs · not yet measured"
+    uid=g11:11_105 LineBreak "
+"
+    uid=g11:11_106 "No calibrated rate scaling"
+    uid=g11:11_107 heading "Grok Uncalibrated" level="2"
+    uid=g11:11_108 "Last 7 days of local tokens · quota unavailable"
+    uid=g11:11_109 "15,220 tokens"
+    uid=g11:11_110 "Role share of this provider’s tokens, not quota"
+    uid=g11:11_111 "ROLE"
+    uid=g11:11_112 "TOKEN SHARE"
+    uid=g11:11_113 "SESSIONS"
+    uid=g11:11_114 link "main chat" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=main+chat"
+    uid=g11:11_116 "0.00%"
+    uid=g11:11_117 "0"
+    uid=g11:11_118 link "supervision" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=supervision"
+    uid=g11:11_120 "0.00%"
+    uid=g11:11_121 "0"
+    uid=g11:11_122 link "worker" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=worker"
+    uid=g11:11_124 "0.00%"
+    uid=g11:11_125 "0"
+    uid=g11:11_126 link "scout" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=scout"
+    uid=g11:11_128 "0.00%"
+    uid=g11:11_129 "0"
+    uid=g11:11_130 link "reviewer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=reviewer"
+    uid=g11:11_132 "0.00%"
+    uid=g11:11_133 "0"
+    uid=g11:11_134 link "fixer" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=fixer"
+    uid=g11:11_136 "0.00%"
+    uid=g11:11_137 "0"
+    uid=g11:11_138 link "helper subagents" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=helper+subagents"
+    uid=g11:11_140 "0.00%"
+    uid=g11:11_141 "0"
+    uid=g11:11_142 link "other automation" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=other+automation"
+    uid=g11:11_144 "0.00%"
+    uid=g11:11_145 "0"
+    uid=g11:11_146 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+    uid=g11:11_148 "100.00%"
+    uid=g11:11_149 "2"
+    uid=g11:11_150 "No published seed; relative price weights only"
+    uid=g11:11_151 LineBreak "
+"
+    uid=g11:11_152 "0 usable hourly pairs · not yet measured"
+    uid=g11:11_153 LineBreak "
+"
+    uid=g11:11_154 "No calibrated rate scaling"
+    uid=g11:11_155 LineBreak "
+"
+    uid=g11:11_156 "2 unpriced or partial facts"
+    uid=g11:11_157 LineBreak "
+"
+    uid=g11:11_158 "unavailable: multiple or missing lanes"
+    uid=g11:11_159 "Estimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned."
+    uid=g11:11_160 heading "Top sessions across all providers" level="2"
+    uid=g11:11_161 "Current provider windows · ranked by total tokens, including cache reads"
+    uid=g11:11_162 "RANK"
+    uid=g11:11_163 link "TOKENS ↓" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&sort=tokens&dir=desc"
+    uid=g11:11_165 link "EST. QUOTA" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&sort=quota&dir=desc"
+    uid=g11:11_167 "PROVIDER / MODEL"
+    uid=g11:11_168 "ROLE"
+    uid=g11:11_169 "PROJECT"
+    uid=g11:11_170 "TASK / SESSION"
+    uid=g11:11_171 "START / END"
+    uid=g11:11_172 row "Open session main-large"
+      uid=g11:11_173 "1"
+      uid=g11:11_174 link "180,110" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22main-large%22%2C%22claude%22%2C%22main+chat%22%5D"
+      uid=g11:11_176 "21.18%"
+      uid=g11:11_177 LineBreak "
+"
+      uid=g11:11_178 "week · 2026-11-11 01:37 UTC"
+      uid=g11:11_179 "Claude"
+      uid=g11:11_180 LineBreak "
+"
+      uid=g11:11_181 "claude-opus-5-5"
+      uid=g11:11_182 link "main chat" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=main+chat"
+      uid=g11:11_184 "home"
+      uid=g11:11_185 link "main-large" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22main-large%22%2C%22claude%22%2C%22main+chat%22%5D"
+      uid=g11:11_187 "2026-11-05 01:35 UTC"
+      uid=g11:11_188 LineBreak "
+"
+      uid=g11:11_189 "2026-11-05 01:35 UTC"
+    uid=g11:11_190 row "Open session demo-worker"
+      uid=g11:11_191 "2"
+      uid=g11:11_192 link "97,610" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22worker-demo%22%2C%22codex%22%2C%22worker%22%5D"
+      uid=g11:11_194 "29.24%"
+      uid=g11:11_195 LineBreak "
+"
+      uid=g11:11_196 "week · 2026-11-11 01:37 UTC"
+      uid=g11:11_197 "Codex"
+      uid=g11:11_198 LineBreak "
+"
+      uid=g11:11_199 "gpt-6.1-sol"
+      uid=g11:11_200 link "worker" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=worker"
+      uid=g11:11_202 "demo"
+      uid=g11:11_203 link "demo-worker" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22worker-demo%22%2C%22codex%22%2C%22worker%22%5D"
+      uid=g11:11_205 "2026-11-05 01:35 UTC"
+      uid=g11:11_206 LineBreak "
+"
+      uid=g11:11_207 "2026-11-05 01:35 UTC"
+    uid=g11:11_208 row "Open session supervisor"
+      uid=g11:11_209 "3"
+      uid=g11:11_210 link "60,110" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22supervisor%22%2C%22claude%22%2C%22supervision%22%5D"
+      uid=g11:11_212 "7.12%"
+      uid=g11:11_213 LineBreak "
+"
+      uid=g11:11_214 "week · 2026-11-11 01:37 UTC"
+      uid=g11:11_215 "Claude"
+      uid=g11:11_216 LineBreak "
+"
+      uid=g11:11_217 "claude-opus-5-5"
+      uid=g11:11_218 link "supervision" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=supervision"
+      uid=g11:11_220 "Unassigned"
+      uid=g11:11_221 link "supervisor" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22supervisor%22%2C%22claude%22%2C%22supervision%22%5D"
+      uid=g11:11_223 "2026-11-05 01:35 UTC"
+      uid=g11:11_224 LineBreak "
+"
+      uid=g11:11_225 "2026-11-05 01:35 UTC"
+    uid=g11:11_226 row "Open session unproven"
+      uid=g11:11_227 "4"
+      uid=g11:11_228 link "13,610" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22unproven%22%2C%22claude%22%2C%22unassigned%22%5D"
+      uid=g11:11_230 "1.67%"
+      uid=g11:11_231 LineBreak "
+"
+      uid=g11:11_232 "week · 2026-11-11 01:37 UTC"
+      uid=g11:11_233 "Claude"
+      uid=g11:11_234 LineBreak "
+"
+      uid=g11:11_235 "claude-opus-5-5"
+      uid=g11:11_236 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+      uid=g11:11_238 "Unassigned"
+      uid=g11:11_239 link "unproven" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22unproven%22%2C%22claude%22%2C%22unassigned%22%5D"
+      uid=g11:11_241 "2026-11-05 01:35 UTC"
+      uid=g11:11_242 LineBreak "
+"
+      uid=g11:11_243 "2026-11-05 01:35 UTC"
+    uid=g11:11_244 row "Open session grok-session"
+      uid=g11:11_245 "5"
+      uid=g11:11_246 link "12,110" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22grok-session%22%2C%22grok%22%2C%22unassigned%22%5D"
+      uid=g11:11_248 "Unknown"
+      uid=g11:11_249 "Grok"
+      uid=g11:11_250 LineBreak "
+"
+      uid=g11:11_251 "grok-4.7"
+      uid=g11:11_252 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+      uid=g11:11_254 "Unassigned"
+      uid=g11:11_255 link "grok-session" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22grok-session%22%2C%22grok%22%2C%22unassigned%22%5D"
+      uid=g11:11_257 "2026-11-05 01:35 UTC"
+      uid=g11:11_258 LineBreak "
+"
+      uid=g11:11_259 "2026-11-05 01:35 UTC"
+    uid=g11:11_260 row "Open session </script><script>window.INJECTED=1</script>"
+      uid=g11:11_261 "6"
+      uid=g11:11_262 link "3,110" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22%3C%2Fscript%3E%3Cscript%3Ewindow.INJECTED%3D1%3C%2Fscript%3E%22%2C%22grok%22%2C%22unassigned%22%5D"
+      uid=g11:11_264 "Unknown"
+      uid=g11:11_265 "Grok"
+      uid=g11:11_266 LineBreak "
+"
+      uid=g11:11_267 "grok-4.7"
+      uid=g11:11_268 link "unassigned" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&role=unassigned"
+      uid=g11:11_270 "Unassigned"
+      uid=g11:11_271 link "</script><script>window.INJECTED=1</script>" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22%3C%2Fscript%3E%3Cscript%3Ewindow.INJECTED%3D1%3C%2Fscript%3E%22%2C%22grok%22%2C%22unassigned%22%5D"
+      uid=g11:11_273 "2026-11-05 01:35 UTC"
+      uid=g11:11_274 LineBreak "
+"
+      uid=g11:11_275 "2026-11-05 01:35 UTC"
+    uid=g11:11_276 row "Open session main-small"
+      uid=g11:11_277 "7"
+      uid=g11:11_278 link "1,910" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&session=%5B%22pi%22%2C%22main-small%22%2C%22codex%22%2C%22main+chat%22%5D"
+      uid=g11:11_280 "0.76%"
+      uid=g11:11_281 LineBreak "
+"
+      uid=g11:11_282 "week · 2026-11-11 01:37 UTC"
+      uid=g11:11_283 "Codex"
+    ... (truncated, 18066 chars total)
+help[4]:
+  Run `chrome-devtools-axi click @g11:11_14` to click the "main chat" link
+  Run `chrome-devtools-axi scroll down` to scroll down
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+  Run `chrome-devtools-axi open file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html --full` to see complete snapshot
+
+$ chrome-devtools-axi resize 1440 1100
+resized:
+  width: 1440
+  height: 1100
+
+$ chrome-devtools-axi eval () => { if(document.querySelectorAll('.card').length!==3) throw Error('provider cards');
+const cards=[...document.querySelectorAll('.card')];
+if(!cards[0].innerText.includes('30.00% used')||!cards[0].innerText.includes('70.00% left')||!cards[0].innerText.includes('Seeded')) throw Error('quota balance');
+if(!cards[2].innerText.includes('100.00%')||!cards[2].innerText.includes('not quota')) throw Error('Grok fallback');
+if(window.INJECTED) throw Error('script injection');
+if(document.querySelector('select')) throw Error('unexpected extra filter');
+if([...document.querySelectorAll('#sessions tbody tr')].some(r=>r.innerText.includes('outside-window'))) throw Error('old usage included');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Local usage report\",\"hash\":\"\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nLocal usage report\\n\\nQuota estimates by role, with a direct path to each session.\\n\\nClaudeSeeded / low confidence\\n2026-11-04 01:37 UTC\\nto 2026-11-11 01:37 UTC · week\\n30.00% used\\n\\n70.00% left · account-wide reading\\n\\nROLE\\tEST. QUOTA\\tSESSIONS\\nmain chat\\t21.18%\\t1\\nsupervision\\t7.12%\\t1\\nworker\\t0.00%\\t0\\nscout\\t0.00%\\t0\\nreviewer\\t0.04%\\t1\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t1.67% *\\t2\\n\\n0.0741 percentage points / API-priced $1\\n0 usable hourly pairs · seed / not yet measured\\nWindow scaling ×578.621\\n1 unpriced or partial facts\\n\\nCodexUncalibrated\\n2026-11-04 01:37 UTC\\nto 2026-11-11 01:37 UTC · week\\n30.00% used\\n\\n70.00% left · account-wide reading\\n\\nROLE\\tEST. QUOTA\\tSESSIONS\\nmain chat\\t0.76%\\t1\\nsupervision\\t0.00%\\t0\\nworker\\t29.24%\\t1\\nscout\\t0.00%\\t0\\nreviewer\\t0.00%\\t0\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t0.00%\\t0\\n\\nNo published seed; relative price weights only\\n0 usable hourly pairs · not yet measured\\nNo calibrated rate scaling\\n\\nGrokUncalibrated\\nLast 7 days of local tokens · quota unavailable\\n15,220 tokens\\n\\nRole share of this provider’s tokens, not quota\\n\\nROLE\\tTOKEN SHARE\\tSESSIONS\\nmain chat\\t0.00%\\t0\\nsupervision\\t0.00%\\t0\\nworker\\t0.00%\\t0\\nscout\\t0.00%\\t0\\nreviewer\\t0.00%\\t0\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t100.00%\\t2\\n\\nNo published seed; relative price weights only\\n0 usable hourly pairs · not yet measured\\nNo calibrated rate scaling\\n2 unpriced or partial facts\\nunavailable: multiple or missing lanes\\n\\nEstimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned.\\n\\nTop sessions across all providers\\n\\nCurrent provider windows · ranked by total tokens, including cache reads\\n\\nRANK\\tTOKENS ↓\\tEST. QUOTA\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n5\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n7\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\nView all sessions\\n\\nAccounting coverage and source health\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/overview.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/overview.png
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('.card a')].find(a=>a.textContent==='main chat').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const rows=[...document.querySelectorAll('#sessions tbody tr')]; if(document.querySelector('h1').textContent!=='All sessions'||rows.length!==2||!rows.every(r=>r.children[4].textContent==='main chat')) throw Error('role navigation');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"All sessions | Local usage report\",\"hash\":\"#page=sessions&role=main+chat\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\nAll sessions\\n\\n2 sessions · 182,020 total tokens · default rank: most tokens\\n\\nRole:\\nmain chat\\n·\\nClear\\nRANK\\tTOKENS ↓\\tEST. QUOTA\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\n* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/role-sessions.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/role-sessions.png
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='Overview').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { document.querySelector('#sessions thead th:nth-child(2) a').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const rows=[...document.querySelectorAll('#sessions tbody tr')];
+const values=rows.map(r=>Number(r.children[1].textContent.replace(/[^0-9]/g,'')));
+if(rows.length!==9 || values[0]!==180110 || !values.every((v,i)=>!i||values[i-1]>=v)) throw Error('default rank or all-session count');
+if(rows.some(r=>r.innerText.includes('outside-window'))) throw Error('current window boundary');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"All sessions | Local usage report\",\"hash\":\"#page=sessions&sort=tokens&dir=desc\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\nAll sessions\\n\\n9 sessions · 369,760 total tokens · default rank: most tokens\\n\\nRANK\\tTOKENS ↓\\tEST. QUOTA\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n5\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n7\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n9\\t330\\t0.04%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\treviewer\\tproject\\tnm:native-review\\t2026-11-05 01:34 UTC\\n2026-11-05 01:35 UTC\\n\\n* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/sessions.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/sessions.png
+
+$ chrome-devtools-axi eval () => { document.querySelector('#sessions thead th:nth-child(2) a').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const values=[...document.querySelectorAll('#sessions tbody tr')].map(r=>Number(r.children[1].textContent.replace(/[^0-9]/g,''))); if(values[0]!==330||!values.every((v,i)=>!i||values[i-1]<=v)) throw Error('ascending tokens');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"All sessions | Local usage report\",\"hash\":\"#page=sessions&sort=tokens&dir=asc\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\nAll sessions\\n\\n9 sessions · 369,760 total tokens · default rank: most tokens\\n\\nRANK\\tTOKENS ↑\\tEST. QUOTA\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t330\\t0.04%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\treviewer\\tproject\\tnm:native-review\\t2026-11-05 01:34 UTC\\n2026-11-05 01:35 UTC\\n2\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n5\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n7\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n9\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\n* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { document.querySelector('#sessions thead th:nth-child(3) a').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const rows=[...document.querySelectorAll('#sessions tbody tr')];const vals=rows.map(r=>parseFloat(r.children[2].textContent)); if(!rows[0].innerText.includes('demo-worker') || vals[0]!==29.24 || !vals.filter(Number.isFinite).every((v,i,a)=>!i||a[i-1]>=v)) throw Error('quota descending');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"All sessions | Local usage report\",\"hash\":\"#page=sessions&sort=quota&dir=desc\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\nAll sessions\\n\\n9 sessions · 369,760 total tokens · default rank: most tokens\\n\\nRANK\\tTOKENS\\tEST. QUOTA ↓\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n5\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t330\\t0.04%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\treviewer\\tproject\\tnm:native-review\\t2026-11-05 01:34 UTC\\n2026-11-05 01:35 UTC\\n7\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n9\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\n* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { document.querySelector('#sessions thead th:nth-child(3) a').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const vals=[...document.querySelectorAll('#sessions tbody tr')].map(r=>parseFloat(r.children[2].textContent)).filter(Number.isFinite); if(!vals.every((v,i)=>!i||vals[i-1]<=v)) throw Error('quota ascending');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"All sessions | Local usage report\",\"hash\":\"#page=sessions&sort=quota&dir=asc\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\nAll sessions\\n\\n9 sessions · 369,760 total tokens · default rank: most tokens\\n\\nRANK\\tTOKENS\\tEST. QUOTA ↑\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t330\\t0.04%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\treviewer\\tproject\\tnm:native-review\\t2026-11-05 01:34 UTC\\n2026-11-05 01:35 UTC\\n5\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n7\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n9\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\n* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('tr.session-row')].find(r=>r.innerText.includes('demo-worker')).click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const text=document.querySelector('main').innerText;
+for(const value of ['Session usage','Codex / gpt-6.1-sol / high','worker','launch','65,000','32,500','10','100','29.24%','Low confidence','demo-worker']) if(!text.includes(value)) throw Error('missing detail '+value);
+const links=[...document.querySelectorAll('a[href^="file://"]')];if(links.length!==2||!links.some(a=>a.textContent.includes('task record'))) throw Error('local links');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Session usage | Local usage report\",\"hash\":\"#page=session&sort=quota&dir=asc&session=%5B%22pi%22%2C%22worker-demo%22%2C%22codex%22%2C%22worker%22%5D\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\n/\\nAll sessions\\nSession usage\\n\\ndemo-worker\\n\\nSession\\nProvider / model / effort\\nCodex / gpt-6.1-sol / high\\nRole and evidence\\nworker\\nNative Pi session contains its typed Firstmate launch contract; task kind and project from backlog\\nProject / task\\n{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/projects/demo\\ndemo-worker\\nStart / end / duration\\n2026-11-05 01:35:42 UTC\\n2026-11-05 01:35:42 UTC\\n0 seconds\\nUsage event span; not active model time. Invocation aggregates use completion buckets.\\nLocal source links\\nOpen session log / accounting ledger\\nOpen review run: not linked\\nOpen task record\\nAccounted usage\\n97,610\\n\\nTotal tokens, including cached reads\\n\\nFresh input\\t65,000\\nCached read\\t32,500\\nCache write\\t10\\nOutput (includes reasoning)\\t100\\nEstimated quota: 29.24%\\n\\nLow confidence · relative price weights · scaled to account reading\\n\\nweek · 2026-11-11 01:37 UTC\\n\\nThis is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently.\\n\\n1 accounting fact · response\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/worker-detail.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/worker-detail.png
+
+$ chrome-devtools-axi eval () => document.querySelector('a[href^="file://"]').href
+result: "\"file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/fixture-2.jsonl\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { document.querySelector('a[href^="file://"]').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi snapshot
+page:
+  refs: 2
+snapshot:
+uid=g12:12_0 RootWebArea url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/fixture-2.jsonl"
+  uid=g12:12_1 "{"type": "session", "id": "worker-demo", "timestamp": "2026-11-05T01:34:02+00:00", "cwd": "/synthetic/demo"}
+{"type": "message", "timestamp": "2026-11-05T01:34:03+00:00", "message": {"role": "user", "content": "FIRSTMATE_OP: v1 launch-brief: synthetic\nYour steering inbox is `{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/state/demo-worker.inbox`; only this task.\nSECRET_LAUNCH"}}
+{"type": "message", "id": "entry-worker-demo", "timestamp": "2026-11-05T01:35:42+00:00", "message": {"role": "assistant", "model": "gpt-6.1-sol", "provider": "openai", "thinkingLevel": "high", "responseId": "response-worker-demo", "content": "SECRET_PROMPT_OR_RESPONSE", "usage": {"input": 65000, "cacheRead": 32500, "cacheWrite": 10, "output": 100, "reasoning": 25, "cacheWrite1h": 0, "totalTokens": 97610}}}
+"
+help[1]:
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+
+$ chrome-devtools-axi eval () => ({body:document.body.innerText})
+result: "{\"body\":\"{\\\"type\\\": \\\"session\\\", \\\"id\\\": \\\"worker-demo\\\", \\\"timestamp\\\": \\\"2026-11-05T01:34:02+00:00\\\", \\\"cwd\\\": \\\"/synthetic/demo\\\"}\\n{\\\"type\\\": \\\"message\\\", \\\"timestamp\\\": \\\"2026-11-05T01:34:03+00:00\\\", \\\"message\\\": {\\\"role\\\": \\\"user\\\", \\\"content\\\": \\\"FIRSTMATE_OP: v1 launch-brief: synthetic\\\\nYour steering inbox is `{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/state/demo-worker.inbox`; only this task.\\\\nSECRET_LAUNCH\\\"}}\\n{\\\"type\\\": \\\"message\\\", \\\"id\\\": \\\"entry-worker-demo\\\", \\\"timestamp\\\": \\\"2026-11-05T01:35:42+00:00\\\", \\\"message\\\": {\\\"role\\\": \\\"assistant\\\", \\\"model\\\": \\\"gpt-6.1-sol\\\", \\\"provider\\\": \\\"openai\\\", \\\"thinkingLevel\\\": \\\"high\\\", \\\"responseId\\\": \\\"response-worker-demo\\\", \\\"content\\\": \\\"SECRET_PROMPT_OR_RESPONSE\\\", \\\"usage\\\": {\\\"input\\\": 65000, \\\"cacheRead\\\": 32500, \\\"cacheWrite\\\": 10, \\\"output\\\": 100, \\\"reasoning\\\": 25, \\\"cacheWrite1h\\\": 0, \\\"totalTokens\\\": 97610}}}\\n\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi back
+page:
+  title: Session usage | Local usage report
+  refs: 51
+snapshot:
+uid=g13:13_0 RootWebArea "Session usage | Local usage report" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&sort=quota&dir=asc&session=%5B%22pi%22%2C%22worker-demo%22%2C%22codex%22%2C%22worker%22%5D"
+  uid=g13:13_1 main
+    uid=g13:13_2 "PRIVATE · ON THIS MACHINE · UTC"
+    uid=g13:13_3 navigation
+      uid=g13:13_4 link "Overview" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=quota&dir=asc"
+      uid=g13:13_6 "/"
+      uid=g13:13_7 link "All sessions" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&sort=quota&dir=asc"
+    uid=g13:13_9 heading "Session usage" level="1"
+    uid=g13:13_10 "demo-worker"
+    uid=g13:13_11 heading "Session" level="2"
+    uid=g13:13_12 "Provider / model / effort"
+    uid=g13:13_13 "Codex / gpt-6.1-sol / high"
+    uid=g13:13_14 "Role and evidence"
+    uid=g13:13_15 "worker"
+    uid=g13:13_16 LineBreak "
+"
+    uid=g13:13_17 "Native Pi session contains its typed Firstmate launch contract; task kind and project from backlog"
+    uid=g13:13_18 "Project / task"
+    uid=g13:13_19 "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/projects/demo"
+    uid=g13:13_20 LineBreak "
+"
+    uid=g13:13_21 "demo-worker"
+    uid=g13:13_22 "Start / end / duration"
+    uid=g13:13_23 "2026-11-05 01:35:42 UTC"
+    uid=g13:13_24 LineBreak "
+"
+    uid=g13:13_25 "2026-11-05 01:35:42 UTC"
+    uid=g13:13_26 LineBreak "
+"
+    uid=g13:13_27 "0 seconds"
+    uid=g13:13_28 LineBreak "
+"
+    uid=g13:13_29 "Usage event span; not active model time. Invocation aggregates use completion buckets."
+    uid=g13:13_30 "Local source links"
+    uid=g13:13_31 link "Open session log / accounting ledger" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/fixture-2.jsonl"
+    uid=g13:13_33 LineBreak "
+"
+    uid=g13:13_34 "Open review run: not linked"
+    uid=g13:13_35 LineBreak "
+"
+    uid=g13:13_36 link "Open task record" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/data/demo-worker/brief.md"
+    uid=g13:13_38 heading "Accounted usage" level="2"
+    uid=g13:13_39 "97,610"
+    uid=g13:13_40 "Total tokens, including cached reads"
+    uid=g13:13_41 "Fresh input"
+    uid=g13:13_42 "65,000"
+    uid=g13:13_43 "Cached read"
+    uid=g13:13_44 "32,500"
+    uid=g13:13_45 "Cache write"
+    uid=g13:13_46 "10"
+    uid=g13:13_47 "Output (includes reasoning)"
+    uid=g13:13_48 "100"
+    uid=g13:13_49 heading "Estimated quota: 29.24%" level="3"
+    uid=g13:13_50 "Low confidence · relative price weights · scaled to account reading"
+    uid=g13:13_51 "week · 2026-11-11 01:37 UTC"
+    uid=g13:13_52 "This is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently."
+    uid=g13:13_53 "1 accounting fact · response"
+    uid=g13:13_54 "Generated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry"
+help[3]:
+  Run `chrome-devtools-axi click @g13:13_4` to click the "Overview" link
+  Run `chrome-devtools-axi scroll down` to scroll down
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='Open task record').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => document.body.innerText
+result: "\"Synthetic task record\\n\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi back
+page:
+  title: Session usage | Local usage report
+  refs: 51
+snapshot:
+uid=g14:14_0 RootWebArea "Session usage | Local usage report" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&sort=quota&dir=asc&session=%5B%22pi%22%2C%22worker-demo%22%2C%22codex%22%2C%22worker%22%5D"
+  uid=g14:14_1 main
+    uid=g14:14_2 "PRIVATE · ON THIS MACHINE · UTC"
+    uid=g14:14_3 navigation
+      uid=g14:14_4 link "Overview" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=quota&dir=asc"
+      uid=g14:14_6 "/"
+      uid=g14:14_7 link "All sessions" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&sort=quota&dir=asc"
+    uid=g14:14_9 heading "Session usage" level="1"
+    uid=g14:14_10 "demo-worker"
+    uid=g14:14_11 heading "Session" level="2"
+    uid=g14:14_12 "Provider / model / effort"
+    uid=g14:14_13 "Codex / gpt-6.1-sol / high"
+    uid=g14:14_14 "Role and evidence"
+    uid=g14:14_15 "worker"
+    uid=g14:14_16 LineBreak "
+"
+    uid=g14:14_17 "Native Pi session contains its typed Firstmate launch contract; task kind and project from backlog"
+    uid=g14:14_18 "Project / task"
+    uid=g14:14_19 "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/projects/demo"
+    uid=g14:14_20 LineBreak "
+"
+    uid=g14:14_21 "demo-worker"
+    uid=g14:14_22 "Start / end / duration"
+    uid=g14:14_23 "2026-11-05 01:35:42 UTC"
+    uid=g14:14_24 LineBreak "
+"
+    uid=g14:14_25 "2026-11-05 01:35:42 UTC"
+    uid=g14:14_26 LineBreak "
+"
+    uid=g14:14_27 "0 seconds"
+    uid=g14:14_28 LineBreak "
+"
+    uid=g14:14_29 "Usage event span; not active model time. Invocation aggregates use completion buckets."
+    uid=g14:14_30 "Local source links"
+    uid=g14:14_31 link "Open session log / accounting ledger" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/fixture-2.jsonl"
+    uid=g14:14_33 LineBreak "
+"
+    uid=g14:14_34 "Open review run: not linked"
+    uid=g14:14_35 LineBreak "
+"
+    uid=g14:14_36 link "Open task record" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home/data/demo-worker/brief.md"
+    uid=g14:14_38 heading "Accounted usage" level="2"
+    uid=g14:14_39 "97,610"
+    uid=g14:14_40 "Total tokens, including cached reads"
+    uid=g14:14_41 "Fresh input"
+    uid=g14:14_42 "65,000"
+    uid=g14:14_43 "Cached read"
+    uid=g14:14_44 "32,500"
+    uid=g14:14_45 "Cache write"
+    uid=g14:14_46 "10"
+    uid=g14:14_47 "Output (includes reasoning)"
+    uid=g14:14_48 "100"
+    uid=g14:14_49 heading "Estimated quota: 29.24%" level="3"
+    uid=g14:14_50 "Low confidence · relative price weights · scaled to account reading"
+    uid=g14:14_51 "week · 2026-11-11 01:37 UTC"
+    uid=g14:14_52 "This is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently."
+    uid=g14:14_53 "1 accounting fact · response"
+    uid=g14:14_54 "Generated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry"
+help[3]:
+  Run `chrome-devtools-axi click @g14:14_4` to click the "Overview" link
+  Run `chrome-devtools-axi scroll down` to scroll down
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='All sessions').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('tr.session-row')].find(r=>r.children[4].textContent==='reviewer').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { const text=document.querySelector('main').innerText; if(!text.includes('reviewer')||!text.includes('No-mistakes invocation purpose: review')) throw Error('review evidence'); const review=[...document.querySelectorAll('a')].find(a=>a.textContent==='Open review run'); if(!review||!review.href.startsWith('file://')||!review.href.endsWith('/logs/run1')) throw Error('review link');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Session usage | Local usage report\",\"hash\":\"#page=session&sort=quota&dir=asc&session=%5B%22no-mistakes%22%2C%22nm%3Anative-review%22%2C%22claude%22%2C%22reviewer%22%5D\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\n/\\nAll sessions\\nSession usage\\n\\nnm:native-review\\n\\nSession\\nProvider / model / effort\\nClaude / claude-opus-5-5 / Not recorded\\nRole and evidence\\nreviewer\\nNo-mistakes invocation purpose: review\\nProject / task\\n/synthetic/project\\nNo proven task binding\\nStart / end / duration\\n2026-11-05 01:34:02 UTC\\n2026-11-05 01:35:42 UTC\\n100 seconds\\nUsage event span; not active model time. Invocation aggregates use completion buckets.\\nLocal source links\\nOpen session log / accounting ledger\\nOpen review run\\nOpen task record: not linked\\nAccounted usage\\n330\\n\\nTotal tokens, including cached reads\\n\\nFresh input\\t100\\nCached read\\t200\\nCache write\\t10\\nOutput (includes reasoning)\\t20\\nEstimated quota: 0.04%\\n\\nLow confidence · seeded · scaled to account reading\\n\\nweek · 2026-11-11 01:37 UTC\\n\\nThis is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently.\\n\\n1 accounting fact · invocation; completion bucket\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/review-detail.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/review-detail.png
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='Open review run').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => document.body.innerText
+result: "\"Synthetic review run\\n\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi back
+page:
+  title: Session usage | Local usage report
+  refs: 51
+snapshot:
+uid=g15:15_0 RootWebArea "Session usage | Local usage report" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=session&sort=quota&dir=asc&session=%5B%22no-mistakes%22%2C%22nm%3Anative-review%22%2C%22claude%22%2C%22reviewer%22%5D"
+  uid=g15:15_1 main
+    uid=g15:15_2 "PRIVATE · ON THIS MACHINE · UTC"
+    uid=g15:15_3 navigation
+      uid=g15:15_4 link "Overview" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=quota&dir=asc"
+      uid=g15:15_6 "/"
+      uid=g15:15_7 link "All sessions" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#page=sessions&sort=quota&dir=asc"
+    uid=g15:15_9 heading "Session usage" level="1"
+    uid=g15:15_10 "nm:native-review"
+    uid=g15:15_11 heading "Session" level="2"
+    uid=g15:15_12 "Provider / model / effort"
+    uid=g15:15_13 "Claude / claude-opus-5-5 / Not recorded"
+    uid=g15:15_14 "Role and evidence"
+    uid=g15:15_15 "reviewer"
+    uid=g15:15_16 LineBreak "
+"
+    uid=g15:15_17 "No-mistakes invocation purpose: review"
+    uid=g15:15_18 "Project / task"
+    uid=g15:15_19 "/synthetic/project"
+    uid=g15:15_20 LineBreak "
+"
+    uid=g15:15_21 "No proven task binding"
+    uid=g15:15_22 "Start / end / duration"
+    uid=g15:15_23 "2026-11-05 01:34:02 UTC"
+    uid=g15:15_24 LineBreak "
+"
+    uid=g15:15_25 "2026-11-05 01:35:42 UTC"
+    uid=g15:15_26 LineBreak "
+"
+    uid=g15:15_27 "100 seconds"
+    uid=g15:15_28 LineBreak "
+"
+    uid=g15:15_29 "Usage event span; not active model time. Invocation aggregates use completion buckets."
+    uid=g15:15_30 "Local source links"
+    uid=g15:15_31 link "Open session log / accounting ledger" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/review.jsonl"
+    uid=g15:15_33 LineBreak "
+"
+    uid=g15:15_34 link "Open review run" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/logs/run1"
+    uid=g15:15_36 LineBreak "
+"
+    uid=g15:15_37 "Open task record: not linked"
+    uid=g15:15_38 heading "Accounted usage" level="2"
+    uid=g15:15_39 "330"
+    uid=g15:15_40 "Total tokens, including cached reads"
+    uid=g15:15_41 "Fresh input"
+    uid=g15:15_42 "100"
+    uid=g15:15_43 "Cached read"
+    uid=g15:15_44 "200"
+    uid=g15:15_45 "Cache write"
+    uid=g15:15_46 "10"
+    uid=g15:15_47 "Output (includes reasoning)"
+    uid=g15:15_48 "20"
+    uid=g15:15_49 heading "Estimated quota: 0.04%" level="3"
+    uid=g15:15_50 "Low confidence · seeded · scaled to account reading"
+    uid=g15:15_51 "week · 2026-11-11 01:37 UTC"
+    uid=g15:15_52 "This is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently."
+    uid=g15:15_53 "1 accounting fact · invocation; completion bucket"
+    uid=g15:15_54 "Generated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry"
+help[3]:
+  Run `chrome-devtools-axi click @g15:15_4` to click the "Overview" link
+  Run `chrome-devtools-axi scroll down` to scroll down
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='Overview').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='View all sessions').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('tr.session-row')].find(r=>r.innerText.includes('window.INJECTED')).click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { if(window.INJECTED||!document.querySelector('h1').textContent.includes('Session usage')||!document.querySelector('main').innerText.includes('</script><script>window.INJECTED=1</script>')) throw Error('inert detail');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Session usage | Local usage report\",\"hash\":\"#sort=tokens&dir=desc&page=session&session=%5B%22pi%22%2C%22%3C%2Fscript%3E%3Cscript%3Ewindow.INJECTED%3D1%3C%2Fscript%3E%22%2C%22grok%22%2C%22unassigned%22%5D\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\n/\\nAll sessions\\nSession usage\\n\\n</script><script>window.INJECTED=1</script>\\n\\nSession\\nProvider / model / effort\\nGrok / grok-4.7 / high\\nRole and evidence\\nunassigned\\nNo proven role binding\\nProject / task\\nUnassigned\\nNo proven task binding\\nStart / end / duration\\n2026-11-05 01:35:42 UTC\\n2026-11-05 01:35:42 UTC\\n0 seconds\\nUsage event span; not active model time. Invocation aggregates use completion buckets.\\nLocal source links\\nOpen session log / accounting ledger\\nOpen review run: not linked\\nOpen task record: not linked\\nAccounted usage\\n3,110\\n\\nTotal tokens, including cached reads\\n\\nFresh input\\t2,000\\nCached read\\t1,000\\nCache write\\t10\\nOutput (includes reasoning)\\t100\\nEstimated quota: Unknown\\n\\nNo usable estimate for this session / selected window.\\n\\nNo measured quota window\\n\\nThis is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently.\\n\\n1 accounting fact · response\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='Overview').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi emulate --viewport 390x844x1
+emulated:
+  viewport: 390x844x1
+
+$ chrome-devtools-axi eval () => { if(document.documentElement.scrollWidth>innerWidth+1) throw Error('mobile page overflow'); if(document.querySelector('.card').getBoundingClientRect().width>innerWidth) throw Error('mobile card');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Local usage report\",\"hash\":\"#sort=tokens&dir=desc\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nLocal usage report\\n\\nQuota estimates by role, with a direct path to each session.\\n\\nClaudeSeeded / low confidence\\n2026-11-04 01:37 UTC\\nto 2026-11-11 01:37 UTC · week\\n30.00% used\\n\\n70.00% left · account-wide reading\\n\\nROLE\\tEST. QUOTA\\tSESSIONS\\nmain chat\\t21.18%\\t1\\nsupervision\\t7.12%\\t1\\nworker\\t0.00%\\t0\\nscout\\t0.00%\\t0\\nreviewer\\t0.04%\\t1\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t1.67% *\\t2\\n\\n0.0741 percentage points / API-priced $1\\n0 usable hourly pairs · seed / not yet measured\\nWindow scaling ×578.621\\n1 unpriced or partial facts\\n\\nCodexUncalibrated\\n2026-11-04 01:37 UTC\\nto 2026-11-11 01:37 UTC · week\\n30.00% used\\n\\n70.00% left · account-wide reading\\n\\nROLE\\tEST. QUOTA\\tSESSIONS\\nmain chat\\t0.76%\\t1\\nsupervision\\t0.00%\\t0\\nworker\\t29.24%\\t1\\nscout\\t0.00%\\t0\\nreviewer\\t0.00%\\t0\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t0.00%\\t0\\n\\nNo published seed; relative price weights only\\n0 usable hourly pairs · not yet measured\\nNo calibrated rate scaling\\n\\nGrokUncalibrated\\nLast 7 days of local tokens · quota unavailable\\n15,220 tokens\\n\\nRole share of this provider’s tokens, not quota\\n\\nROLE\\tTOKEN SHARE\\tSESSIONS\\nmain chat\\t0.00%\\t0\\nsupervision\\t0.00%\\t0\\nworker\\t0.00%\\t0\\nscout\\t0.00%\\t0\\nreviewer\\t0.00%\\t0\\nfixer\\t0.00%\\t0\\nhelper subagents\\t0.00%\\t0\\nother automation\\t0.00%\\t0\\nunassigned\\t100.00%\\t2\\n\\nNo published seed; relative price weights only\\n0 usable hourly pairs · not yet measured\\nNo calibrated rate scaling\\n2 unpriced or partial facts\\nunavailable: multiple or missing lanes\\n\\nEstimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned.\\n\\nTop sessions across all providers\\n\\nCurrent provider windows · ranked by total tokens, including cache reads\\n\\nRANK\\tTOKENS ↓\\tEST. QUOTA\\tPROVIDER / MODEL\\tROLE\\tPROJECT\\tTASK / SESSION\\tSTART / END\\n1\\t180,110\\t21.18%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tmain chat\\thome\\tmain-large\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n2\\t97,610\\t29.24%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tworker\\tdemo\\tdemo-worker\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n3\\t60,110\\t7.12%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tsupervision\\tUnassigned\\tsupervisor\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n4\\t13,610\\t1.67%\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nclaude-opus-5-5\\tunassigned\\tUnassigned\\tunproven\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n5\\t12,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\tgrok-session\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n6\\t3,110\\tUnknown\\tGrok\\ngrok-4.7\\tunassigned\\tUnassigned\\t</script><script>window.INJECTED=1</script>\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n7\\t1,910\\t0.76%\\nweek · 2026-11-11 01:37 UTC\\tCodex\\ngpt-6.1-sol\\tmain chat\\thome\\tmain-small\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n8\\t860\\tUnknown\\nweek · 2026-11-11 01:37 UTC\\tClaude\\nunsupported-model\\tunassigned\\tUnassigned\\tunknown-model\\t2026-11-05 01:35 UTC\\n2026-11-05 01:35 UTC\\n\\nView all sessions\\n\\nAccounting coverage and source health\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/mobile.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/mobile.png
+
+$ chrome-devtools-axi eval () => { [...document.querySelectorAll('a')].find(a=>a.textContent==='View all sessions').click(); return "clicked"; }
+result: "\"clicked\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi wait 100
+waited: "100"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi eval () => { document.querySelector('tr.session-row').focus(); return document.activeElement.getAttribute('aria-label'); }
+result: "\"Open session main-large\""
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi press Enter
+page:
+  title: Session usage | Local usage report
+  refs: 51
+snapshot:
+uid=g16:15_0 RootWebArea "Session usage | Local usage report" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=tokens&dir=desc&page=session&session=%5B%22pi%22%2C%22main-large%22%2C%22claude%22%2C%22main+chat%22%5D"
+  uid=g16:15_1 main
+    uid=g16:15_2 "PRIVATE · ON THIS MACHINE · UTC"
+    uid=g16:16_0 navigation
+      uid=g16:16_1 link "Overview" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=tokens&dir=desc"
+      uid=g16:16_3 "/"
+      uid=g16:16_4 link "All sessions" url="file://~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/synthetic-report.html#sort=tokens&dir=desc&page=sessions"
+    uid=g16:16_6 heading "Session usage" level="1"
+    uid=g16:16_7 "main-large"
+    uid=g16:16_8 heading "Session" level="2"
+    uid=g16:16_9 "Provider / model / effort"
+    uid=g16:16_10 "Claude / claude-opus-5-5 / high"
+    uid=g16:16_11 "Role and evidence"
+    uid=g16:16_12 "main chat"
+    uid=g16:16_13 LineBreak "
+"
+    uid=g16:16_14 "Primary Pi session in the Firstmate home cwd; not the supervision store"
+    uid=g16:16_15 "Project / task"
+    uid=g16:16_16 "{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home"
+    uid=g16:16_17 LineBreak "
+"
+    uid=g16:16_18 "No proven task binding"
+    uid=g16:16_19 "Start / end / duration"
+    uid=g16:16_20 "2026-11-05 01:35:42 UTC"
+    uid=g16:16_21 LineBreak "
+"
+    uid=g16:16_22 "2026-11-05 01:35:42 UTC"
+    uid=g16:16_23 LineBreak "
+"
+    uid=g16:16_24 "0 seconds"
+    uid=g16:16_25 LineBreak "
+"
+    uid=g16:16_26 "Usage event span; not active model time. Invocation aggregates use completion buckets."
+    uid=g16:16_27 "Local source links"
+    uid=g16:16_28 link "Open session log / accounting ledger" url="file://{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/pi/fixture-0.jsonl"
+    uid=g16:16_30 LineBreak "
+"
+    uid=g16:16_31 "Open review run: not linked"
+    uid=g16:16_32 LineBreak "
+"
+    uid=g16:16_33 "Open task record: not linked"
+    uid=g16:16_34 heading "Accounted usage" level="2"
+    uid=g16:16_35 "180,110"
+    uid=g16:16_36 "Total tokens, including cached reads"
+    uid=g16:16_37 "Fresh input"
+    uid=g16:16_38 "120,000"
+    uid=g16:16_39 "Cached read"
+    uid=g16:16_40 "60,000"
+    uid=g16:16_41 "Cache write"
+    uid=g16:16_42 "10"
+    uid=g16:16_43 "Output (includes reasoning)"
+    uid=g16:16_44 "100"
+    uid=g16:16_45 heading "Estimated quota: 21.18%" level="3"
+    uid=g16:16_46 "Low confidence · seeded · scaled to account reading"
+    uid=g16:16_47 "week · 2026-11-11 01:37 UTC"
+    uid=g16:16_48 "This is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently."
+    uid=g16:16_49 "1 accounting fact · response"
+    uid=g16:16_50 "Generated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry"
+help[3]:
+  Run `chrome-devtools-axi click @g16:16_1` to click the "Overview" link
+  Run `chrome-devtools-axi scroll down` to scroll down
+  Use `chrome-devtools-axi eval <expr>` for JS expressions. For multi-statement code, pass a function: `eval "() => { ...; return result }"`
+
+$ chrome-devtools-axi eval () => { if(document.querySelector('h1').textContent!=='Session usage') throw Error('keyboard activation');; return {verification:"passed",title:document.title,hash:location.hash,text:document.querySelector("main").innerText}; }
+result: "{\"verification\":\"passed\",\"title\":\"Session usage | Local usage report\",\"hash\":\"#sort=tokens&dir=desc&page=session&session=%5B%22pi%22%2C%22main-large%22%2C%22claude%22%2C%22main+chat%22%5D\",\"text\":\"PRIVATE · ON THIS MACHINE · UTC\\nOverview\\n/\\nAll sessions\\nSession usage\\n\\nmain-large\\n\\nSession\\nProvider / model / effort\\nClaude / claude-opus-5-5 / high\\nRole and evidence\\nmain chat\\nPrimary Pi session in the Firstmate home cwd; not the supervision store\\nProject / task\\n{run-worktree}/.test-usage/tmp/fm-usage-report-qcaegtgn/home\\nNo proven task binding\\nStart / end / duration\\n2026-11-05 01:35:42 UTC\\n2026-11-05 01:35:42 UTC\\n0 seconds\\nUsage event span; not active model time. Invocation aggregates use completion buckets.\\nLocal source links\\nOpen session log / accounting ledger\\nOpen review run: not linked\\nOpen task record: not linked\\nAccounted usage\\n180,110\\n\\nTotal tokens, including cached reads\\n\\nFresh input\\t120,000\\nCached read\\t60,000\\nCache write\\t10\\nOutput (includes reasoning)\\t100\\nEstimated quota: 21.18%\\n\\nLow confidence · seeded · scaled to account reading\\n\\nweek · 2026-11-11 01:37 UTC\\n\\nThis is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently.\\n\\n1 accounting fact · response\\n\\nGenerated 2026-11-05 01:37:22 UTC · price table 2026-11-04.1 · offline, no network or telemetry\"}"
+help[1]:
+  Run `chrome-devtools-axi snapshot` to see current page state
+
+$ chrome-devtools-axi screenshot ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/mobile-detail.png --full-page
+screenshot: ~/.no-mistakes/evidence/01M6MEX9WY04H2GWMWE52JER8G/mobile-detail.png
+
+$ chrome-devtools-axi console
+console:
+Emulating viewport: {"deviceScaleFactor":1,"isMobile":false,"hasTouch":false,"isLandscape":false,"width":390,"height":844}
+## Console messages
+<no console messages found>
+help[2]:
+  Run `chrome-devtools-axi console-get <id>` to see a specific message
+  Run `chrome-devtools-axi console --type error` to filter by type
