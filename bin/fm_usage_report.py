@@ -21,7 +21,7 @@ ROLES = ['main chat', 'supervision', 'worker', 'scout', 'reviewer', 'fixer',
          'helper subagents', 'other automation', 'unassigned']
 PROVIDERS = ['claude', 'codex', 'grok']
 FIELDS = ['fresh', 'read', 'write', 'output']
-PARSER_VERSION = 2
+PARSER_VERSION = 3
 PRICES = json.loads((HERE / 'usage-prices.json').read_text())
 
 
@@ -93,15 +93,21 @@ class Store:
         self.db.execute('INSERT OR IGNORE INTO health VALUES (?, ?)', (str(path), code))
 
     def fact(self, key, row, fragments=False):
-        if fragments:
+        if fragments or key.startswith('response:'):
             previous = self.db.execute('SELECT data FROM facts WHERE key=?', (key,)).fetchone()
             if previous:
                 old = json.loads(previous[0])
-                # Claude content-block fragments repeat request-wide input and cache
-                # counters; output progresses as streaming completes. Count each once.
                 for field in FIELDS + ['write1h', 'reported']:
                     known = [r[field] for r in (old, row) if r.get(field) is not None]
                     row[field] = max(known) if known else None
+                if old['source'] == 'pi' and row['source'] != 'pi':
+                    for field in ['source', 'session', 'locator', 'cwd', 'role', 'evidence',
+                                  'session_start', 'time', 'start', 'end']:
+                        if field in old:
+                            row[field] = old[field]
+                for field in ['provider', 'connector', 'model', 'effort']:
+                    if row.get(field) in [None, '', 'unknown'] and old.get(field) not in [None, '', 'unknown']:
+                        row[field] = old[field]
         self.put('facts', key, row)
 
 

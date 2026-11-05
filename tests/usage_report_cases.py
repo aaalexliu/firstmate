@@ -237,14 +237,85 @@ class UsageReport(unittest.TestCase):
         self.assertEqual(len(self.records()),1)
 
     def test_pi_claude_transport_response_overlap(self):
-        rows=self.pi()
+        rows=self.pi(cwd=str(self.home))
         rows[1]['message'].update(provider='pi-claude-cli')
         self.write('pi',rows)
         self.write('claude',[dict(timestamp=iso(self.now-100),sessionId='alpha',message=dict(
             role='assistant',id='response-alpha',model='claude-opus-5-5',usage=dict(input_tokens=100,
             cache_read_input_tokens=200,cache_creation_input_tokens=10,output_tokens=30)))])
         self.cli('import')
-        self.assertEqual(len(self.records()),1)
+        facts=self.report()['facts']
+        self.assertEqual(len(facts),1)
+        self.assertEqual((facts[0]['source'],facts[0]['session'],facts[0]['role']),('pi','alpha','main chat'))
+        self.assertEqual(facts[0]['locator'],str(self.roots['pi']/'session.jsonl'))
+
+    def test_transport_overlap_repairs_native_roles_in_both_orders_and_replays(self):
+        data=self.home/'data';data.mkdir()
+        (data/'backlog.md').write_text('- [ ] bound-worker - Fixture (kind: ship)\n')
+        expected={}
+        for provider in ['claude','codex']:
+            for role in ['main chat','supervision','worker']:
+                sid=provider+'-'+role.replace(' ','-')
+                model='claude-opus-5-5' if provider=='claude' else 'gpt-6.1-sol'
+                expected[sid]=(provider,model,role)
+                if provider=='claude':
+                    transport=[dict(timestamp=iso(self.now-100),sessionId='transport-'+sid,message=dict(
+                        role='assistant',id='response-'+sid,model=model,usage=dict(input_tokens=120,
+                        cache_read_input_tokens=200,cache_creation_input_tokens=10,output_tokens=40)))]
+                else:
+                    transport=[dict(type='session_meta',payload=dict(id='transport-'+sid,cwd='/transport',model_provider='openai')),
+                        dict(type='turn_context',payload=dict(model=model,effort='xhigh')),
+                        dict(type='token_usage_record',timestamp=iso(self.now-100),payload=dict(
+                            response_id='response-'+sid,usage=dict(input_tokens=320,cached_input_tokens=200,output_tokens=40))),
+                        dict(type='compacted',payload=dict(compaction_response_id='response-'+sid))]
+                self.write(provider,transport,sid+'.jsonl')
+        self.cli('import')
+        self.assertEqual(len(self.records()),6)
+        for sid,(_,model,role) in expected.items():
+            rows=self.pi(sid,cwd=str(self.home) if role!='worker' else '/synthetic/worker',model=model)
+            rows[-1]['message']['provider']='pi-claude-cli' if sid.startswith('claude') else 'openai'
+            if role=='worker':
+                rows.insert(1,dict(type='message',timestamp=iso(self.now-199),message=dict(role='user',content=
+                    f'FIRSTMATE_OP: v1 launch-brief: fixture\nYour steering inbox is `{self.home}/state/bound-worker.inbox`; fixture.')))
+            self.write('supervision' if role=='supervision' else 'pi',rows,sid+'.jsonl')
+        self.cli('import')
+        facts=self.report()['facts']
+        self.assertEqual({f['session']:(f['provider'],f['model'],f['role']) for f in facts},expected)
+        self.assertTrue(all((f['source'],f['fresh'],f['read'],f['write'],f['output'])==('pi',120,200,10,40) for f in facts))
+        self.assertTrue(all(f['session_start']==self.now-200 for f in facts))
+        self.assertTrue(all(f['task']=='bound-worker' for f in facts if f['role']=='worker'))
+        for sid,(provider,model,_) in expected.items():
+            if provider=='claude':
+                self.write('claude',[dict(timestamp=iso(self.now-100),sessionId='transport-'+sid,message=dict(
+                    role='assistant',id='response-'+sid,model=model,usage=dict(input_tokens=110,
+                    cache_read_input_tokens=200,cache_creation_input_tokens=10,output_tokens=50)))],sid+'.jsonl',append=True)
+            else:
+                self.write('codex',[dict(type='session_meta',payload=dict(id='updated-transport-'+sid,cwd='/transport',model_provider='openai')),
+                    dict(type='turn_context',payload=dict(model=model,effort='xhigh')),
+                    dict(type='compacted',payload=dict(compaction_response_id='response-'+sid)),
+                    dict(type='token_usage_record',timestamp=iso(self.now-100),payload=dict(
+                        response_id='response-'+sid,usage=dict(input_tokens=310,cached_input_tokens=200,output_tokens=50)))],sid+'.jsonl')
+        self.cli('import')
+        facts=self.report()['facts']
+        self.assertEqual({f['session']:(f['provider'],f['model'],f['role']) for f in facts},expected)
+        self.assertTrue(all(f['fresh']==120 and f['output']==50 for f in facts))
+        self.assertEqual(len(facts),6)
+        with sqlite3.connect(data/'usage-report/usage.sqlite') as db:
+            for key,encoded in db.execute('SELECT key,data FROM facts').fetchall():
+                fact=json.loads(encoded)
+                fact.update(source='claude' if fact['provider']=='claude' else 'codex-compaction',
+                    session='transport-'+fact['session'],cwd='/transport',role='unassigned',
+                    evidence='No proven role binding',locator='/transport/log.jsonl',session_start=self.now-100)
+                db.execute('UPDATE facts SET data=? WHERE key=?',(json.dumps(fact),key))
+            for path,encoded in db.execute('SELECT path,state FROM cursors').fetchall():
+                state=json.loads(encoded);state['parser_version']=2
+                db.execute('UPDATE cursors SET state=? WHERE path=?',(json.dumps(state),path))
+        self.cli('import')
+        facts=self.report()['facts']
+        self.assertEqual({f['session']:(f['provider'],f['model'],f['role']) for f in facts},expected)
+        self.assertTrue(all(f['source']=='pi' and f['fresh']==120 and f['output']==50 for f in facts))
+        self.assertTrue(all(f['session_start']==self.now-200 and f['locator'].startswith(str(self.root)) for f in facts))
+        self.assertEqual(len(facts),6)
 
     def codex(self):
         return [dict(type='session_meta',payload=dict(id='thread',cwd='/synthetic/codex',model_provider='openai')),

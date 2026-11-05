@@ -419,7 +419,7 @@
           link(title + (sort === key ? (asc ? " ↑" : " ↓") : ""), {
             page: "sessions",
             sort: key,
-            dir: sort === key && !asc ? "asc" : "desc",
+            dir: !top && sort === key && !asc ? "asc" : "desc",
           });
         return `<div class="scroll"><table id="sessions"><thead><tr><th>Rank</th><th class="number">${heading("Tokens", "tokens")}</th><th class="number">${heading("Est. quota", "quota")}</th><th>Provider / model</th><th>Role</th><th>Project</th><th>Task / session</th><th>Start / end</th></tr></thead><tbody>${sessions.map((s, i) => `<tr class="session-row" data-session="${esc(s.key)}" tabindex="0" aria-label="Open session ${esc(s.task || s.session)}"><td>${i + 1}</td><td class="number">${link(n.format(s.tokens) + (s.partial ? " *" : ""), { page: "session", session: s.key })}</td><td class="number">${pct(s.quota)}${s.partialQuota ? " *" : ""}${s.window ? `<br><small>${esc(s.window)}</small>` : ""}</td><td>${esc(names[s.provider] || s.provider)}<br><small>${esc([...s.models].join(", "))}</small></td><td>${link(s.role, { page: "sessions", role: s.role, session: null })}</td><td class="task">${esc(s.project ? s.project.split("/").filter(Boolean).pop() : "Unassigned")}</td><td class="task">${link(s.task || s.session, { page: "session", session: s.key })}</td><td class="nowrap"><small>${day(s.start)}<br>${day(s.end)}</small></td></tr>`).join("")}</tbody></table></div>`;
       }
