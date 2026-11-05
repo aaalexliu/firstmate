@@ -609,6 +609,65 @@ class UsageReport(unittest.TestCase):
         self.assertEqual(top.split(),['1,240',f'{expected:.2f}%','codex','main','chat','codex-main'])
         self.assertIn('main chat: 15.00% (1); supervision: 15.00% (1)',result)
 
+    def test_text_ignores_new_run_before_refresh(self):
+        self.nm_db(completed=False)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('DELETE FROM runs')
+            db.execute('DELETE FROM run_agent_sessions')
+        self.write('pi',self.pi('main',cwd=str(self.home)))
+        self.write('supervision',self.pi('branch'),'branch.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        before=self.cli('text','--now',str(self.now)).stdout
+        self.assertIn('main chat: 15.00% (1); supervision: 15.00% (1)',before)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('INSERT INTO runs VALUES (?,?,?,?,?,?)',
+                ('new-run','repo','fm/new',str(self.home),self.now-500,self.now))
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('new-run','pi','branch'))
+        after=self.cli('text','--now',str(self.now)).stdout
+        self.assertEqual(after,before)
+
+    def test_text_bounds_existing_run_overlap_to_stored_invocations(self):
+        self.nm_db()
+        with sqlite3.connect(self.nm) as db:
+            db.execute('UPDATE runs SET updated_at=?',(self.now-100,))
+        for sid,cwd,ts in [('possible','/synthetic/review',self.now-150),
+                           ('later','/synthetic/review',self.now-50),
+                           ('new-link',str(self.home),self.now-50),
+                           ('native-review','/synthetic/review',self.now-150)]:
+            self.write('pi',self.pi(sid,cwd=cwd,ts=ts),sid+'.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['possible_pipeline'],1)
+        self.assertEqual(report['excluded']['native_pipeline'],1)
+        before=self.cli('text','--now',str(self.now)).stdout
+        self.assertIn('later',before)
+        self.assertIn('new-link',before)
+        self.assertNotIn('possible',before)
+        store=self.home/'data/usage-report/usage.sqlite'
+        stored=store.read_bytes()
+        html=self.output.read_bytes()
+        with sqlite3.connect(self.nm) as db:
+            db.execute('UPDATE runs SET updated_at=?',(self.now,))
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('run1','pi','new-link'))
+        after=self.cli('text','--now',str(self.now)).stdout
+        self.assertEqual(after,before)
+        self.assertEqual(store.read_bytes(),stored)
+        self.assertEqual(self.output.read_bytes(),html)
+
+    def test_text_discloses_unavailable_overlap_reconciliation(self):
+        self.nm_db()
+        self.write('pi',self.pi('possible',cwd='/synthetic/review',ts=self.now-150))
+        self.cli('refresh','--now',str(self.now))
+        store=self.home/'data/usage-report/usage.sqlite'
+        stored=store.read_bytes()
+        with sqlite3.connect(self.nm) as db:
+            db.execute('DROP TABLE run_agent_sessions')
+        result=self.cli('text','--now',str(self.now)).stdout
+        self.assertEqual(result.count('Overlap reconciliation skipped:'),1)
+        self.assertIn('possible',result)
+        self.assertIn('Claude: 30.00% used',result)
+        self.assertEqual(store.read_bytes(),stored)
+
     def test_text_is_readonly_and_does_not_import_sample_or_render(self):
         self.nm_db()
         self.write('pi',self.pi())

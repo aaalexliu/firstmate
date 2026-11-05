@@ -841,15 +841,30 @@ def main():
                 store.warn(nm_path, 'No-mistakes schema unavailable; import incomplete')
         if args.command == 'text':
             # Reconcile overlap metadata without importing invocation accounting.
-            if nm_path.exists():
-                try:
-                    with closing(sqlite3.connect(nm_path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
-                        db.row_factory = sqlite3.Row
-                        run_map, links = nm_context(db)
-                        runs = list(run_map.values())
-                except sqlite3.Error:
-                    runs, links = [], []
-            facts, excluded = attributed(store, store.rows('facts'), runs, links, home)
+            stored_facts = store.rows('facts')
+            run_ends, run_sessions = {}, {}
+            for fact in stored_facts:
+                if fact['source'] != 'no-mistakes':
+                    continue
+                run_id = fact['run']
+                run_ends[run_id] = max(run_ends.get(run_id, 0), fact['end'])
+                sessions = run_sessions.setdefault(run_id, set())
+                sessions.update(fact.get('native_sessions', []))
+                if fact.get('session_key'):
+                    sessions.add(fact['session_key'])
+            try:
+                with closing(sqlite3.connect(nm_path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
+                    db.row_factory = sqlite3.Row
+                    db.execute('BEGIN')
+                    run_map, live_links = nm_context(db)
+                    runs = [dict(run, updated_at=min(stamp(run['updated_at']) or 0, run_ends[str(run_id)]))
+                            for run_id, run in run_map.items() if str(run_id) in run_ends]
+                    links = [link for link in live_links
+                             if link['session_id'] in run_sessions.get(str(link['run_id']), set())]
+            except sqlite3.Error:
+                runs, links = [], []
+                print('Overlap reconciliation skipped: no readable no-mistakes ledger.')
+            facts, excluded = attributed(store, stored_facts, runs, links, home)
             print(text_report(report_data(store, facts, excluded, now)))
         if args.command in ['sample', 'refresh']:
             sampled_facts, _ = attributed(store, store.rows('facts'), runs, links, home)
