@@ -629,7 +629,7 @@ def rate_fit(store, facts, snapshots, now):
     return fits
 
 
-def build_report(store, facts, excluded, output, now):
+def report_data(store, facts, excluded, now):
     for fact in facts:
         fact['priced'] = price(fact)
     snapshots = store.rows('quota')
@@ -660,12 +660,84 @@ def build_report(store, facts, excluded, output, now):
         window['allocation_rate'] = window['used'] / priced if preferred and priced else None
         windows.append(window)
     health = [{'source': Path(r[0]).name, 'warning': r[1]} for r in store.db.execute('SELECT path, code FROM health ORDER BY path, code')]
-    payload = dict(generated=now, roles=ROLES, windows=windows, facts=facts, excluded=excluded,
-                   health=health, prices=PRICES['version'], seeds=PRICES['seed'])
+    return dict(generated=now, roles=ROLES, windows=windows, facts=facts, excluded=excluded,
+                health=health, prices=PRICES['version'], seeds=PRICES['seed'])
+
+
+def build_report(store, facts, excluded, output, now):
+    payload = report_data(store, facts, excluded, now)
     text = json.dumps(payload, separators=(',', ':'), ensure_ascii=True).replace('<', '\\u003c').replace('&', '\\u0026')
     template = (HERE / 'usage-report.html').read_text()
     atomic(output, re.sub(r'/\*ACCOUNTING_DATA\*/\s*null', lambda _: text, template).encode())
+    atomic(output.with_name('summary.txt'), (text_report(payload) + '\n').encode())
     return payload
+
+
+def text_report(payload):
+    def safe(value):
+        return ''.join(c if 32 <= ord(c) < 127 else '?' for c in str(value))
+
+    def percent(value, partial=False):
+        return 'Unknown' if value is None else f'{value:.2f}%' + (' *' if partial else '')
+
+    sessions = {}
+    windows = {w['provider']: w for w in payload['windows']}
+    for fact in payload['facts']:
+        window = windows.get(fact['provider'])
+        if fact['time'] is None or not (
+                window['start'] <= fact['time'] < window['end'] if window else
+                fact['time'] >= payload['generated'] - 7*86400):
+            continue
+        source = 'codex' if fact['source'].startswith('codex') else fact['source']
+        key = (source, fact['session'], fact['provider'], fact['role'])
+        session = sessions.setdefault(key, dict(provider=fact['provider'], role=fact['role'],
+            session=fact['session'], task=None, tokens=0, partial=False, priced=0, unpriced=False))
+        values = [fact[k] for k in FIELDS]
+        session['tokens'] += (sum(values) if all(v is not None for v in values) else
+                              fact['reported'] if fact['reported'] is not None else sum(v or 0 for v in values))
+        session['partial'] |= any(v is None for v in values)
+        session['priced'] += fact['priced'] or 0
+        session['unpriced'] |= fact['priced'] is None
+        session['task'] = session['task'] or fact.get('task')
+    for session in sessions.values():
+        window = windows.get(session['provider'])
+        session['quota'] = (session['priced'] * window['allocation_rate'] if window and window['available']
+            and window['allocation_rate'] is not None and (not session['unpriced'] or session['priced'] > 0) else None)
+        session['partial_quota'] = session['unpriced'] and session['priced'] > 0
+
+    generated = dt.datetime.fromtimestamp(payload['generated'], dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    lines = [f'Local usage generated {generated} (quota shares are estimates)']
+    for window in payload['windows']:
+        provider = window['provider']
+        rows = [s for s in sessions.values() if s['provider'] == provider]
+        if window['available']:
+            end = dt.datetime.fromtimestamp(window['end'], dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+            lines.append(f"{provider.title()}: {percent(window['used'])} used, {percent(window['remaining'])} left; "
+                         f"{safe(window['label'])} ends {end}")
+            roles = []
+            for role in payload['roles']:
+                rr = [s for s in rows if s['role'] == role]
+                share = sum(s['quota'] or 0 for s in rr)
+                if share > 0:
+                    partial = any(s['quota'] is None or s['partial_quota'] for s in rr)
+                    roles.append(f"{role}: {percent(share, partial)} ({len(rr)})")
+            lines.extend('  ' + '; '.join(roles[i:i+2]) for i in range(0, len(roles), 2))
+        else:
+            lines.append(f"{provider.title()}: quota unavailable; last 7 days, {sum(s['tokens'] for s in rows):,} tokens")
+    lines.extend(['Role counts in parentheses are sessions.', '', 'Top 10 sessions (current windows; unavailable providers: last 7 days)',
+                  f"{'Tokens':>13} {'Est. quota':>11} {'Provider':<8} {'Role':<16} Task / session"])
+    top = sorted(sessions.items(), key=lambda item: (-item[1]['tokens'], item[0]))[:10]
+    for _, session in top:
+        tokens = f"{session['tokens']:,}" + (' *' if session['partial'] else '')
+        share = percent(session['quota'], session['partial_quota'])
+        identifier = safe(session['task']) if session['task'] else safe(session['session'])[:12]
+        lines.append(f"{tokens:>13} {share:>11} {safe(session['provider']):<8} {safe(session['role']):<16} {identifier}")
+    if not top:
+        lines.append('No sessions in these windows.')
+    lines.extend(['', '* Incomplete token or priced coverage; Unknown = no quota estimate.',
+                  'Account-wide allocation, not exact session use; other devices and missing logs can bias it.',
+                  'Rates may be seeded or uncalibrated; run refresh first for fresh accounting and quota.'])
+    return '\n'.join(lines)
 
 
 def launch_agent(args, home):
@@ -697,7 +769,7 @@ def launch_agent(args, home):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Import local token accounting and generate a private, offline HTML report.',
+    parser = argparse.ArgumentParser(description='Import local token accounting and generate private HTML or plain-text reports.',
         epilog='Only accounting fields and source locators are stored. No prompts, responses, credentials, or account IDs. '
         'Incremental JSONL cursors and facts commit together; partial final lines wait. '
         'No-mistakes invocation deltas own proven overlapping native sessions; possible overlaps are excluded and counted. '
@@ -706,14 +778,15 @@ def main():
         'No server or launchctl action runs. install/uninstall only write/remove the home-specific plist. '
         'Run refresh hourly via launchd after reviewing the printed bootstrap command. '
         'Source overrides replace defaults and support isolated fixtures.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('command', choices=['import', 'report', 'sample', 'refresh', 'install', 'uninstall'])
+    parser.add_argument('command', choices=['import', 'report', 'text', 'sample', 'refresh', 'install', 'uninstall'],
+        help='text prints the saved summary.txt: no import, sampling, or writes; report/refresh render HTML and text together')
     parser.add_argument('--pi-root', type=Path, action='append', help='Pi JSONL root (repeatable)')
     parser.add_argument('--supervision-root', type=Path, action='append', help='Supervision JSONL root (repeatable)')
     parser.add_argument('--claude-root', type=Path, action='append', help='Claude projects JSONL root')
     parser.add_argument('--codex-root', type=Path, action='append', help='Codex JSONL root')
     parser.add_argument('--nm-db', type=Path, help='Read-only no-mistakes state.sqlite')
     parser.add_argument('--task-data-root', type=Path, help='Firstmate backlog and project registry root (default: FM_HOME/data, independent of report output)')
-    parser.add_argument('--output', type=Path, help='Private offline HTML destination')
+    parser.add_argument('--output', type=Path, help='Private HTML destination; summary.txt beside it is also written (or read by text)')
     parser.add_argument('--now', type=float, help='Fixed Unix time for deterministic accounting replay')
     parser.add_argument('--launch-agents', type=Path, default=Path.home()/'Library/LaunchAgents')
     args = parser.parse_args()
@@ -727,6 +800,13 @@ def main():
     projects_root = Path(os.environ.get('FM_PROJECTS_OVERRIDE', home/'projects'))
     if args.command in ['install', 'uninstall']:
         launch_agent(args, home)
+        return
+    if args.command == 'text':
+        summary = (args.output or data/'index.html').with_name('summary.txt')
+        try:
+            print(summary.read_text(), end='')
+        except FileNotFoundError:
+            parser.exit(1, 'No saved usage summary; run fm-usage-report.sh refresh first.\n')
         return
     store = Store(data/'usage.sqlite')
     now = args.now if args.now is not None else time.time()

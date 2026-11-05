@@ -576,6 +576,195 @@ class UsageReport(unittest.TestCase):
                 self.cli('report','--now',invalid)
             self.assertEqual(error.exception.returncode,2)
 
+    def test_text_shares_match_html_windows_and_session_estimates(self):
+        self.write('pi',self.pi('main',cwd=str(self.home)))
+        self.write('supervision',self.pi('branch'),'branch.jsonl')
+        codex=self.pi('codex-main',cwd=str(self.home),model='gpt-6.1-sol')
+        codex[-1]['message']['provider']='openai'
+        codex[-1]['message']['usage']['input']=1000
+        self.write('pi',codex,'codex.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        result=self.cli('text','--now',str(self.now)).stdout
+        self.assertTrue(result.isascii())
+        self.assertLess(len(result.splitlines()),40)
+        self.assertNotIn('\x1b',result)
+        self.assertEqual(result,(self.output.parent/'summary.txt').read_text())
+        self.assertEqual(result.splitlines()[0],
+            'Local usage generated '+dt.datetime.fromtimestamp(report['generated'],dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')+
+            ' (quota shares are estimates)')
+        for window in report['windows']:
+            if not window['available']:
+                self.assertIn('Grok: quota unavailable; last 7 days, 0 tokens',result)
+                continue
+            block=result.split(window['provider'].title()+': ',1)[1].splitlines()
+            self.assertIn(f"{window['used']:.2f}% used, {window['remaining']:.2f}% left",block[0])
+            self.assertIn(dt.datetime.fromtimestamp(window['end'],dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),block[0])
+            role_lines=[]
+            for line in block[1:]:
+                if not line.startswith('  '):break
+                role_lines.append(line)
+            shares=[float(x) for x in re.findall(r': ([0-9.]+)%',' '.join(role_lines))]
+            self.assertAlmostEqual(sum(shares),window['used'],delta=.02)
+        window=next(w for w in report['windows'] if w['provider']=='codex')
+        fact=next(f for f in report['facts'] if f['session']=='codex-main')
+        expected=fact['priced']*window['allocation_rate']
+        top=result.split('Task / session\n',1)[1].splitlines()[0]
+        self.assertEqual(top.split(),['1,240',f'{expected:.2f}%','codex','main','chat','codex-main'])
+        self.assertIn('main chat: 15.00% (1); supervision: 15.00% (1)',result)
+
+    def test_text_ignores_new_run_before_refresh(self):
+        self.nm_db(completed=False)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('DELETE FROM runs')
+            db.execute('DELETE FROM run_agent_sessions')
+        self.write('pi',self.pi('main',cwd=str(self.home)))
+        self.write('supervision',self.pi('branch'),'branch.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        before=self.cli('text','--now',str(self.now)).stdout
+        self.assertIn('main chat: 15.00% (1); supervision: 15.00% (1)',before)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('INSERT INTO runs VALUES (?,?,?,?,?,?)',
+                ('new-run','repo','fm/new',str(self.home),self.now-500,self.now))
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('new-run','pi','branch'))
+        after=self.cli('text','--now',str(self.now)).stdout
+        self.assertEqual(after,before)
+
+    def test_text_preserves_render_time_exclusions_after_ledger_changes(self):
+        self.nm_db()
+        for sid,cwd,ts in [('possible','/synthetic/review',self.now-150),
+                           ('later','/synthetic/review',self.now-50),
+                           ('new-link',str(self.home),self.now-50),
+                           ('native-review','/synthetic/review',self.now-150)]:
+            self.write('pi',self.pi(sid,cwd=cwd,ts=ts),sid+'.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['possible_pipeline'],2)
+        self.assertEqual(report['excluded']['native_pipeline'],1)
+        before=self.cli('text','--now',str(self.now)).stdout
+        self.assertNotIn('later',before)
+        self.assertIn('new-link',before)
+        self.assertNotIn('possible',before)
+        store=self.home/'data/usage-report/usage.sqlite'
+        stored=store.read_bytes()
+        html=self.output.read_bytes()
+        with sqlite3.connect(self.nm) as db:
+            db.execute('UPDATE runs SET created_at=?,updated_at=?,worktree_dir=?',
+                (self.now-2000,self.now+500,str(self.home)))
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('run1','pi','new-link'))
+        after=self.cli('text','--now',str(self.now)).stdout
+        self.assertEqual(after,before)
+        self.assertEqual(store.read_bytes(),stored)
+        self.assertEqual(self.output.read_bytes(),html)
+
+    def test_text_preserves_active_and_other_agent_link_exclusions(self):
+        self.nm_db(completed=False)
+        for sid in ['native-review','other-agent','main']:
+            self.write('pi',self.pi(sid,cwd=str(self.home)),sid+'.jsonl')
+        with sqlite3.connect(self.nm) as db:
+            db.execute('INSERT INTO run_agent_sessions VALUES (?,?,?)',('run1','codex','other-agent'))
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['native_pipeline'],2)
+        before=self.cli('text').stdout
+        self.assertIn('main chat: 30.00% (1)',before)
+        self.assertNotIn('native-revie',before)
+        self.assertNotIn('other-agent',before)
+        with sqlite3.connect(self.nm) as db:
+            db.execute('UPDATE agent_invocations SET completed_at=?',(self.now-100,))
+        self.cli('refresh','--now',str(self.now))
+        report=self.rendered_report()
+        self.assertEqual(report['excluded']['native_pipeline'],2)
+        window=next(w for w in report['windows'] if w['provider']=='claude')
+        fact=next(f for f in report['facts'] if f['session']=='main')
+        result=self.cli('text').stdout
+        self.assertIn(f"main chat: {fact['priced']*window['allocation_rate']:.2f}% (1)",result)
+        self.assertNotIn('other-agent',result)
+        # Reading the saved summary needs neither the store nor a usable live ledger.
+        expected=result
+        with sqlite3.connect(self.nm) as db:
+            db.execute('DROP TABLE run_agent_sessions')
+        (self.home/'data/usage-report/usage.sqlite').unlink()
+        self.assertEqual(self.cli('text').stdout,expected)
+        self.nm.unlink()
+        self.assertEqual(self.cli('text').stdout,expected)
+
+    def test_text_is_readonly_and_does_not_import_sample_or_render(self):
+        self.nm_db()
+        self.write('pi',self.pi())
+        self.cli('refresh','--now',str(self.now))
+        store=self.home/'data/usage-report/usage.sqlite'
+        before=store.read_bytes()
+        mode=store.stat().st_mode
+        html=self.output.read_bytes()
+        self.write('pi',self.pi('not-imported'),'new.jsonl')
+        self.quota_file.write_text('not JSON')
+        result=self.cli('text','--now',str(self.now)).stdout
+        self.assertNotIn('not-imported',result)
+        self.assertIn('Claude: 30.00% used',result)
+        self.assertEqual(store.read_bytes(),before)
+        self.assertEqual(store.stat().st_mode,mode)
+        self.assertEqual(self.output.read_bytes(),html)
+        summary=self.output.parent/'summary.txt'
+        self.assertEqual(summary.stat().st_mode & 0o777,0o600)
+        self.assertEqual(result,summary.read_text())
+        self.assertEqual(self.cli('text','--now',str(self.now+86400)).stdout,result)
+
+    def test_text_partial_unknown_fallback_and_top_ten(self):
+        for i in range(12):
+            rows=self.pi('session-'+str(i),cwd=str(self.home))
+            rows[-1]['message']['usage']['input']=100+i
+            self.write('pi',rows,str(i)+'.jsonl')
+        mixed=self.pi('session-11',model='unsupported-model',cwd=str(self.home))
+        mixed[-1]['id']='unknown-entry';mixed[-1]['message']['responseId']='unknown-response'
+        self.write('pi',mixed,'mixed.jsonl')
+        unknown=self.pi('only-unknown',model='unsupported-model')
+        unknown[-1]['message']['usage']['input']=400
+        self.write('pi',unknown,'unknown.jsonl')
+        partial=self.pi('partial')
+        partial[-1]['message']['usage'].update(input=None,totalTokens=900)
+        self.write('pi',partial,'partial.jsonl')
+        old=self.pi('outside-window',ts=self.now-2*86400)
+        old[-1]['message']['usage']['input']=2000
+        self.write('pi',old,'old.jsonl')
+        self.cli('refresh','--now',str(self.now))
+        result=self.cli('text','--now',str(self.now)).stdout
+        self.assertIn('main chat: 30.00% * (12)',result)
+        self.assertNotIn('outside-wind',result)
+        top=result.split('Task / session\n',1)[1].split('\n\n',1)[0].splitlines()
+        self.assertEqual(len(top),10)
+        self.assertIn('900 *',top[0])
+        self.assertIn('Unknown',top[0])
+        self.assertIn('session-11',top[1])
+        self.assertIn('% *',top[1])
+        self.assertIn('only-unknown',top[2])
+        self.assertIn('Unknown',top[2])
+        tokens=[int(line.split()[0].replace(',','')) for line in top]
+        self.assertEqual(tokens,sorted(tokens,reverse=True))
+        self.assertIn('Unknown',result)
+        self.cli('report','--now',str(self.now+3*3600))
+        fallback=self.cli('text').stdout
+        self.assertIn('Claude: quota unavailable; last 7 days,',fallback)
+        self.assertNotIn('30.00% used',fallback)
+        self.assertIn('outside-wind',fallback)
+
+    def test_text_missing_summary_and_empty_report(self):
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            self.cli('text')
+        self.assertIn('run fm-usage-report.sh refresh first',error.exception.stderr)
+        self.assertFalse((self.home/'data').exists())
+        self.cli('import')
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.cli('text')
+        self.cli('report')
+        result=self.cli('text').stdout
+        self.assertIn('No sessions in these windows.',result)
+        self.assertEqual(result.count('quota unavailable; last 7 days, 0 tokens'),3)
+        # Default paths use the summary next to the default HTML, not --output's directory.
+        subprocess.run([str(CLI),'report','--nm-db',str(self.nm)],env=self.env,capture_output=True,check=True)
+        default=subprocess.run([str(CLI),'text'],env=self.env,capture_output=True,text=True,check=True)
+        self.assertEqual(default.stdout,(self.home/'data/usage-report/summary.txt').read_text())
+
     def test_launchd_install_uninstall_no_load(self):
         directory=self.root/'LaunchAgents'
         self.env['FM_PROJECTS_OVERRIDE']=str(self.root/'registered-projects')

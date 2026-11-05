@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fm-usage-report.sh - import local accounting and build an offline usage report.
+# fm-usage-report.sh - import local accounting; render offline HTML or read-only text.
 # Usage and accounting contract: fm-usage-report.sh --help
 # Requires python3 (standard library only). Never reads credentials itself.
 set -eu
