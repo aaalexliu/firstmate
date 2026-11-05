@@ -1,0 +1,17 @@
+Local usage generated 2026-11-05 03:37:59 UTC (quota shares are estimates)
+Claude: 40.00% used, 60.00% left; week ends 2026-11-11 03:37 UTC
+  main chat: 20.00% (1); supervision: 20.00% (1)
+Codex: 30.00% used, 70.00% left; week ends 2026-11-11 03:37 UTC
+  main chat: 30.00% (1)
+Grok: quota unavailable; last 7 days, 0 tokens
+Role counts in parentheses are sessions.
+
+Top 10 sessions (current windows; unavailable providers: last 7 days)
+       Tokens  Est. quota Provider Role             Task / session
+        1,240      30.00% codex    main chat        codex-main
+          340      20.00% claude   supervision      branch
+          340      20.00% claude   main chat        main
+
+* Incomplete token or priced coverage; Unknown = no quota estimate.
+Account-wide allocation, not exact session use; other devices and missing logs can bias it.
+Rates may be seeded or uncalibrated; run refresh first for fresh accounting and quota.

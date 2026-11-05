@@ -1,0 +1,13 @@
+Local usage generated 2026-11-05 03:37:59 UTC (quota shares are estimates)
+Claude: quota unavailable; last 7 days, 0 tokens
+Codex: quota unavailable; last 7 days, 0 tokens
+Grok: quota unavailable; last 7 days, 0 tokens
+Role counts in parentheses are sessions.
+
+Top 10 sessions (current windows; unavailable providers: last 7 days)
+       Tokens  Est. quota Provider Role             Task / session
+No sessions in these windows.
+
+* Incomplete token or priced coverage; Unknown = no quota estimate.
+Account-wide allocation, not exact session use; other devices and missing logs can bias it.
+Rates may be seeded or uncalibrated; run refresh first for fresh accounting and quota.

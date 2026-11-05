@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Local usage report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172536;
+        --muted: #58677b;
+        --line: #dce3ec;
+        --blue: #2056a4;
+        --paper: #fff;
+        --back: #f4f6f9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--back);
+        color: var(--ink);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      main {
+        max-width: 1456px;
+        margin: auto;
+        padding: 38px 36px 64px;
+      }
+      h1 {
+        font-size: 29px;
+        line-height: 1.2;
+        margin: 8px 0 12px;
+        letter-spacing: -0.6px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      h3 {
+        font-size: 16px;
+        margin: 22px 0 8px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      a,
+      button.link {
+        color: var(--blue);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 3px solid #eaa944;
+        outline-offset: 3px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      .muted,
+      small {
+        color: var(--muted);
+      }
+      small {
+        font-size: 12px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 22px 0;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 10px;
+        background: white;
+      }
+      button.link {
+        padding: 0;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+      }
+      .providers {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 18px;
+      }
+      .card,
+      .panel {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 22px;
+      }
+      .card .balance {
+        font-size: 26px;
+        font-weight: 650;
+        margin: 12px 0 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .panel {
+        margin-top: 22px;
+      }
+      .scroll {
+        overflow: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        text-align: left;
+        font-size: 13px;
+      }
+      th {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        white-space: nowrap;
+      }
+      th,
+      td {
+        padding: 11px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th:first-child,
+      td:first-child {
+        padding-left: 0;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      .number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .card th,
+      .card td {
+        padding: 8px 6px;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 4px;
+        background: #eef3fb;
+        color: #234e8e;
+        font-size: 11px;
+        padding: 2px 6px;
+        margin-left: 7px;
+        vertical-align: middle;
+      }
+      .note {
+        border-left: 3px solid #a8bbd9;
+        padding-left: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        margin: 16px 0;
+      }
+      .detail {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .detail dt {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 16px;
+      }
+      .detail dd {
+        margin: 4px 0;
+        overflow-wrap: anywhere;
+      }
+      .tokens {
+        font-size: 30px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 650;
+      }
+      .empty {
+        padding: 35px 0;
+        color: var(--muted);
+      }
+      .crumb {
+        margin-bottom: 18px;
+        display: flex;
+        gap: 12px;
+      }
+      .window {
+        min-height: 40px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .task {
+        max-width: 260px;
+        overflow-wrap: anywhere;
+      }
+      .status {
+        font-size: 12px;
+        min-height: 68px;
+      }
+      .session-row {
+        cursor: pointer;
+      }
+      .session-row:hover,
+      .session-row:focus {
+        background: #f1f5fc;
+        outline: 0;
+      }
+      footer {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 28px;
+      }
+      details {
+        margin-top: 12px;
+      }
+      summary {
+        cursor: pointer;
+      }
+      .nowrap {
+        white-space: nowrap;
+      }
+      @media (max-width: 700px) {
+        main {
+          padding: 24px 16px;
+        }
+        .providers {
+          grid-template-columns: 1fr;
+        }
+        .detail {
+          grid-template-columns: 1fr;
+        }
+        .card,
+        .panel {
+          padding: 18px;
+        }
+        h1 {
+          font-size: 25px;
+        }
+        .toolbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Private · on this machine · UTC</div>
+      <div id="app"></div>
+      <footer id="footer"></footer>
+    </main>
+    <script>
+      "use strict";
+      const DATA = {"generated":1793849879.0,"roles":["main chat","supervision","worker","scout","reviewer","fixer","helper subagents","other automation","unassigned"],"windows":[{"provider":"claude","observed":1793849879,"generated":1793849879,"status":"fresh","window":"weekly","label":"week","kind":"weekly","start":1793763479,"end":1794368279,"remaining":60,"available":true,"fit":{"provider":"claude","rate":0.07407407407407407,"samples":0,"seeded":true,"fitted_at":1793849879.0,"price_version":"2026-11-04.1"},"unpriced":0,"priced_usage":0.00218,"used":40,"scale":247706.42201834865,"allocation_rate":18348.623853211007},{"provider":"codex","observed":1793849879,"generated":1793849879,"status":"fresh","window":"weekly","label":"week","kind":"weekly","start":1793763479,"end":1794368279,"remaining":70,"available":true,"fit":{"provider":"codex","rate":null,"samples":0,"seeded":false,"fitted_at":1793849879.0,"price_version":"2026-11-04.1"},"unpriced":0,"priced_usage":0.002345,"used":30,"scale":null,"allocation_rate":12793.176972281452},{"provider":"grok","status":"unavailable: not sampled","start":1793245079.0,"end":1793849879.0,"available":false,"fit":{"provider":"grok","rate":null,"samples":0,"seeded":false,"fitted_at":1793849879.0,"price_version":"2026-11-04.1"},"unpriced":0,"priced_usage":0,"used":null,"scale":null,"allocation_rate":null}],"facts":[{"connector":"openai","cwd":"{run-worktree}/.usage-live/home","effort":null,"end":1793849779.0,"evidence":"Primary Pi session in the Firstmate home cwd; not the supervision store","fresh":1000,"grain":"response","locator":"{run-worktree}/.usage-live/pi/codex-main.jsonl","model":"gpt-6.1-sol","normalization_version":1,"output":30,"project":"{run-worktree}/.usage-live/home","provider":"codex","read":200,"reported":1240,"review":null,"role":"main chat","run":null,"session":"codex-main","session_start":1793849679.0,"source":"pi","start":1793849779.0,"task":null,"task_record":null,"time":1793849779.0,"write":10,"write1h":null,"priced":0.002345},{"connector":"anthropic","cwd":"{run-worktree}/.usage-live/home","effort":null,"end":1793849779.0,"evidence":"Primary Pi session in the Firstmate home cwd; not the supervision store","fresh":100,"grain":"response","locator":"{run-worktree}/.usage-live/pi/main.jsonl","model":"claude-opus-5-5","normalization_version":1,"output":30,"project":"{run-worktree}/.usage-live/home","provider":"claude","read":200,"reported":340,"review":null,"role":"main chat","run":null,"session":"main","session_start":1793849679.0,"source":"pi","start":1793849779.0,"task":null,"task_record":null,"time":1793849779.0,"write":10,"write1h":null,"priced":0.00109},{"connector":"anthropic","cwd":"{run-worktree}/.usage-live/home","effort":null,"end":1793849779.0,"evidence":"Explicit Firstmate supervision session store","fresh":100,"grain":"response","locator":"{run-worktree}/.usage-live/supervision/branch.jsonl","model":"claude-opus-5-5","normalization_version":1,"output":30,"project":null,"provider":"claude","read":200,"reported":340,"review":null,"role":"supervision","run":null,"session":"branch","session_start":1793849679.0,"source":"pi","start":1793849779.0,"task":null,"task_record":null,"time":1793849779.0,"write":10,"write1h":null,"priced":0.00109}],"excluded":{"native_pipeline":0,"possible_pipeline":0,"possible_records":[]},"health":[],"prices":"2026-11-04.1","seeds":{"claude":{"pp_per_dollar":0.07407407407407407,"note":"Seed only: $13.50 API-priced usage per 1 percentage point, midpoint of the approved $12-15 large-plan estimate. Not a measured allowance for this account."}}};
+      const app = document.getElementById("app");
+      const n = new Intl.NumberFormat("en-US");
+      const esc = (v) =>
+        String(v ?? "Unknown").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const date = (v) =>
+        v == null
+          ? "Unknown"
+          : new Date(v * 1000).toISOString().replace("T", " ").slice(0, 19) +
+            " UTC";
+      const day = (v) =>
+        v == null
+          ? "Unknown"
+          : new Date(v * 1000).toISOString().slice(0, 16).replace("T", " ") +
+            " UTC";
+      const pct = (v) => (v == null ? "Unknown" : v.toFixed(2) + "%");
+      const names = {
+        claude: "Claude",
+        codex: "Codex",
+        grok: "Grok",
+        unknown: "Unknown provider",
+      };
+      const params = () => new URLSearchParams(location.hash.slice(1));
+      const href = (changes) => {
+        const p = params();
+        Object.entries(changes).forEach(([k, v]) =>
+          v == null ? p.delete(k) : p.set(k, v),
+        );
+        return "#" + p.toString();
+      };
+      const link = (label, changes) =>
+        `<a href="${esc(href(changes))}">${esc(label)}</a>`;
+      const windowFor = (p) => DATA.windows.find((w) => w.provider === p);
+      function tokenValue(f) {
+        const vals = ["fresh", "read", "write", "output"].map((k) => f[k]);
+        return vals.every((v) => v != null)
+          ? vals.reduce((a, b) => a + b, 0)
+          : (f.reported ?? vals.reduce((a, b) => a + (b ?? 0), 0));
+      }
+      function selection() {
+        return DATA.facts.filter((f) => {
+          const w = windowFor(f.provider);
+          return (
+            f.time != null &&
+            (w
+              ? f.time >= w.start && f.time < w.end
+              : f.time >= DATA.generated - 7 * 86400)
+          );
+        });
+      }
+      function groups(facts) {
+        const map = new Map();
+        for (const f of facts) {
+          const key = JSON.stringify([
+            f.source.startsWith("codex") ? "codex" : f.source,
+            f.session,
+            f.provider,
+            f.role,
+          ]);
+          if (!map.has(key))
+            map.set(key, {
+              key,
+              session: f.session,
+              provider: f.provider,
+              role: f.role,
+              facts: [],
+              tokens: 0,
+              partial: false,
+              priced: 0,
+              unpriced: false,
+              models: new Set(),
+              efforts: new Set(),
+              start: f.start,
+              end: f.end,
+              project: f.project,
+              task: f.task,
+              evidence: f.evidence,
+              locator: f.locator,
+              review: f.review,
+              task_record: f.task_record,
+              run: f.run,
+            });
+          const s = map.get(key);
+          s.facts.push(f);
+          s.tokens += tokenValue(f);
+          s.partial ||= ["fresh", "read", "write", "output"].some(
+            (k) => f[k] == null,
+          );
+          s.unpriced ||= f.priced == null;
+          s.priced += f.priced ?? 0;
+          s.models.add(f.model);
+          if (f.effort) s.efforts.add(f.effort);
+          if (f.start != null)
+            s.start = s.start == null ? f.start : Math.min(s.start, f.start);
+          if (f.end != null)
+            s.end = s.end == null ? f.end : Math.max(s.end, f.end);
+          s.project ||= f.project;
+          s.task ||= f.task;
+        }
+        for (const s of map.values()) {
+          const w = windowFor(s.provider);
+          s.quota =
+            w?.available &&
+            w.allocation_rate != null &&
+            (!s.unpriced || s.priced > 0)
+              ? s.priced * w.allocation_rate
+              : null;
+          s.partialQuota = s.unpriced && s.priced > 0;
+          s.window = w?.available ? w.label + " · " + day(w.end) : null;
+        }
+        return [...map.values()];
+      }
+      function filtered() {
+        const role = params().get("role");
+        return groups(selection()).filter((s) => !role || s.role === role);
+      }
+      function toolbar() {
+        return params().get("role") ? `<div class="toolbar">Role: <strong>${esc(params().get("role"))}</strong> · ${link("Clear", { role: null })}</div>` : "";
+      }
+      function table(sessions, top = false) {
+        const sort = top ? "tokens" : params().get("sort") || "tokens",
+          asc = !top && params().get("dir") === "asc";
+        sessions.sort((a, b) => {
+          const x = sort === "quota" ? (a.quota ?? -1) : a.tokens,
+            y = sort === "quota" ? (b.quota ?? -1) : b.tokens;
+          return (asc ? x - y : y - x) || a.key.localeCompare(b.key);
+        });
+        if (top) sessions = sessions.slice(0, 8);
+        if (!sessions.length)
+          return '<p class="empty">No sessions in this window.</p>';
+        const heading = (title, key) =>
+          link(title + (sort === key ? (asc ? " ↑" : " ↓") : ""), {
+            page: "sessions",
+            sort: key,
+            dir: !top && sort === key && !asc ? "asc" : "desc",
+          });
+        return `<div class="scroll"><table id="sessions"><thead><tr><th>Rank</th><th class="number">${heading("Tokens", "tokens")}</th><th class="number">${heading("Est. quota", "quota")}</th><th>Provider / model</th><th>Role</th><th>Project</th><th>Task / session</th><th>Start / end</th></tr></thead><tbody>${sessions.map((s, i) => `<tr class="session-row" data-session="${esc(s.key)}" tabindex="0" aria-label="Open session ${esc(s.task || s.session)}"><td>${i + 1}</td><td class="number">${link(n.format(s.tokens) + (s.partial ? " *" : ""), { page: "session", session: s.key })}</td><td class="number">${pct(s.quota)}${s.partialQuota ? " *" : ""}${s.window ? `<br><small>${esc(s.window)}</small>` : ""}</td><td>${esc(names[s.provider] || s.provider)}<br><small>${esc([...s.models].join(", "))}</small></td><td>${link(s.role, { page: "sessions", role: s.role, session: null })}</td><td class="task">${esc(s.project ? s.project.split("/").filter(Boolean).pop() : "Unassigned")}</td><td class="task">${link(s.task || s.session, { page: "session", session: s.key })}</td><td class="nowrap"><small>${day(s.start)}<br>${day(s.end)}</small></td></tr>`).join("")}</tbody></table></div>`;
+      }
+      function providerCard(w, all) {
+        const rows = all.filter((s) => s.provider === w.provider),
+          tokens = rows.reduce((v, s) => v + s.tokens, 0);
+        const fit = w.fit;
+        const rate =
+          fit.rate == null
+            ? "No published seed; relative price weights only"
+            : `${fit.rate.toFixed(4)} percentage points / API-priced $1`;
+        return `<section class="card"><h2>${esc(names[w.provider])}${fit.rate == null ? '<span class="badge">Uncalibrated</span>' : fit.seeded ? '<span class="badge">Seeded / low confidence</span>' : '<span class="badge">Locally fitted</span>'}</h2><div class="window">${w.available ? `${day(w.start)}<br>to ${day(w.end)} · ${esc(w.label)}` : "Last 7 days of local tokens · quota unavailable"}</div><div class="balance">${w.available ? pct(w.used) + " used" : n.format(tokens) + " tokens"}</div><p class="muted">${w.available ? pct(w.remaining) + " left · account-wide reading" : "Role share of this provider’s tokens, not quota"}</p><div class="scroll"><table><thead><tr><th>Role</th><th class="number">${w.available ? "Est. quota" : "Token share"}</th><th class="number">Sessions</th></tr></thead><tbody>${DATA.roles
+          .map((role) => {
+            const rr = rows.filter((s) => s.role === role),
+              tt = rr.reduce((v, s) => v + s.tokens, 0),
+              sum = rr.reduce((v, s) => v + (s.quota ?? 0), 0);
+            const unknown = rr.some((s) => s.quota == null);
+            return `<tr><td>${link(role, { page: "sessions", role, session: null })}</td><td class="number">${w.available ? (rr.length && rr.every((s) => s.quota == null) ? "Unknown" : pct(sum) + (unknown || rr.some((s) => s.partialQuota) ? " *" : "")) : pct(tokens ? (tt / tokens) * 100 : 0)}</td><td class="number">${rr.length}</td></tr>`;
+          })
+          .join(
+            "",
+          )}</tbody></table></div><p class="status">${esc(rate)}<br>${fit.samples} usable hourly pairs · ${fit.rate == null ? "not yet measured" : fit.seeded ? "seed / not yet measured" : "weekly fit"}<br>${w.scale != null ? "Window scaling ×" + w.scale.toFixed(3) : "No calibrated rate scaling"}${w.unpriced ? "<br>" + w.unpriced + " unpriced or partial facts" : ""}${!w.available ? "<br>" + esc(w.status) : ""}</p></section>`;
+      }
+      function overview() {
+        const all = groups(selection());
+        app.innerHTML = `<h1>Local usage report</h1><p class="muted">Quota estimates by role, with a direct path to each session.</p><div class="providers">${DATA.windows.map((w) => providerCard(w, all)).join("")}</div><p class="note">Estimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned.</p><section class="panel"><h2>Top sessions across all providers</h2><p class="muted">Current provider windows · ranked by total tokens, including cache reads</p>${table(all, true)}<p>${link("View all sessions", { page: "sessions", role: null, session: null, sort: "tokens", dir: "desc" })}</p></section><details class="panel"><summary>Accounting coverage and source health</summary><p>One no-mistakes invocation owns each proven overlapping native session. Invocation totals use completion time and base price rates; per-request context tiers are unknown. Cache writes without a retention split use the 5-minute rate.</p><p>Native pipeline facts excluded: ${DATA.excluded.native_pipeline}. Possible pipeline overlaps excluded for reconciliation: ${DATA.excluded.possible_pipeline}.</p><p>Unknown provider facts: ${DATA.facts.filter((f) => f.provider === "unknown").length}. Partial token facts: ${DATA.facts.filter((f) => ["fresh", "read", "write", "output"].some((k) => f[k] == null)).length}. Unpriced facts: ${DATA.facts.filter((f) => f.priced == null).length}.</p>${DATA.excluded.possible_records.length ? '<details><summary>Sessions excluded as possible pipeline overlaps</summary><ul>' + DATA.excluded.possible_records.map(r => `<li>${esc(r.source)} / ${esc(r.session)} · ${fileLink(r.locator, 'Open source for reconciliation')}</li>`).join('') + '</ul></details>' : ''}${DATA.health.length ? "<ul>" + DATA.health.map((h) => `<li>${esc(h.source)}: ${esc(h.warning)}</li>`).join("") + "</ul>" : "<p>No source warnings.</p>"}<p>Failures and missing hours are not backfilled. Reused or stale quota points do not train the rate. Fits require three fresh hourly pairs with positive total quota movement from the same window segment and refit weekly.</p></details>`;
+      }
+      function sessions() {
+        const rows = filtered();
+        app.innerHTML = `<nav class="crumb">${link("Overview", { page: null, session: null, role: null })}</nav><h1>All sessions</h1><p class="muted">${n.format(rows.length)} sessions · ${n.format(rows.reduce((a, b) => a + b.tokens, 0))} total tokens · default rank: most tokens</p>${toolbar()}<section class="panel">${table(rows)}</section><p class="note">* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.</p>`;
+      }
+      function fileLink(path, label) {
+        if (!path)
+          return `<span class="muted">${esc(label)}: not linked</span>`;
+        if (!path.startsWith("/"))
+          return `<span class="muted">${esc(label)}: invalid local locator</span>`;
+        return `<a href="${esc("file://" + path.split("/").map(encodeURIComponent).join("/"))}">${esc(label)}</a>`;
+      }
+      function detail() {
+        const key = params().get("session"),
+          s = filtered().find((s) => s.key === key);
+        if (!s) {
+          app.innerHTML = `<h1>Session not in this window</h1>${link("View all sessions", { page: "sessions", session: null, role: null })}`;
+          return;
+        }
+        const total = (k) => {
+          const unknown = s.facts.some((f) => f[k] == null);
+          return (
+            n.format(s.facts.reduce((v, f) => v + (f[k] ?? 0), 0)) +
+            (unknown ? " + unknown" : "")
+          );
+        };
+        const w = windowFor(s.provider);
+        app.innerHTML = `<nav class="crumb">${link("Overview", { page: null, session: null, role: null })}<span>/</span>${link("All sessions", { page: "sessions", session: null })}</nav><h1>Session usage</h1><p class="muted">${esc(s.task || s.session)}</p><section class="panel"><div class="detail"><div><h2>Session</h2><dl><dt>Provider / model / effort</dt><dd>${esc(names[s.provider] || s.provider)} / ${esc([...s.models].join(", "))} / ${esc([...s.efforts].join(", ") || "Not recorded")}</dd><dt>Role and evidence</dt><dd>${esc(s.role)}<br><small>${esc(s.evidence)}</small></dd><dt>Project / task</dt><dd>${esc(s.project || "Unassigned")}<br>${esc(s.task || "No proven task binding")}</dd><dt>Start / end / duration</dt><dd>${date(s.start)}<br>${date(s.end)}<br>${s.start != null && s.end != null ? n.format(Math.round(s.end - s.start)) + " seconds" : "Unknown duration"}<br><small>Usage event span; not active model time. Invocation aggregates use completion buckets.</small></dd><dt>Local source links</dt><dd>${fileLink(s.locator, "Open session log / accounting ledger")}<br>${fileLink(s.review, "Open review run")}<br>${fileLink(s.task_record, "Open task record")}</dd></dl></div><div><h2>Accounted usage</h2><div class="tokens">${n.format(s.tokens)}${s.partial ? " *" : ""}</div><p class="muted">Total tokens, including cached reads</p><table><tbody><tr><td>Fresh input</td><td class="number">${total("fresh")}</td></tr><tr><td>Cached read</td><td class="number">${total("read")}</td></tr><tr><td>Cache write</td><td class="number">${total("write")}</td></tr><tr><td>Output (includes reasoning)</td><td class="number">${total("output")}</td></tr></tbody></table><h3>Estimated quota: ${pct(s.quota)}</h3><p>${s.quota == null ? "No usable estimate for this session / selected window." : "Low confidence · " + (w.fit.rate == null ? "relative price weights" : w.fit.seeded ? "seeded" : "locally fitted") + " · scaled to account reading"}</p><p class="muted">${s.window ? esc(s.window) : "No measured quota window"}</p>${s.partialQuota ? '<p class="note">Some usage in this session has no price. This estimate uses only known priced usage.</p>' : ''}<p class="note">This is a relative allocation, not a provider measurement of this session. The provider may count models, cache use, and other devices differently.</p><p><small>${esc(s.facts.length)} accounting ${s.facts.length === 1 ? 'fact' : 'facts'} · ${esc([...new Set(s.facts.map((f) => f.grain))].join(", "))}</small></p></div></div></section>`;
+      }
+      function render() {
+        const page = params().get("page");
+        if (page === "session") detail();
+        else if (page === "sessions") sessions();
+        else overview();
+        document.getElementById("footer").textContent =
+          "Generated " +
+          date(DATA.generated) +
+          " · price table " +
+          DATA.prices +
+          " · offline, no network or telemetry";
+        document.title =
+          page === "session"
+            ? "Session usage | Local usage report"
+            : page === "sessions"
+              ? "All sessions | Local usage report"
+              : "Local usage report";
+      }
+      document.addEventListener("click", (e) => {
+        const row = e.target.closest("tr[data-session]");
+        if (row && !e.target.closest("a,button"))
+          location.hash = href({
+            page: "session",
+            session: row.dataset.session,
+          });
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target.matches("tr[data-session]"))
+          location.hash = href({
+            page: "session",
+            session: e.target.dataset.session,
+          });
+      });
+      window.addEventListener("hashchange", render);
+      render();
+    </script>
+  </body>
+</html>
