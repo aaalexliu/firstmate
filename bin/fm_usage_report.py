@@ -66,7 +66,12 @@ def atomic(path, data):
 
 
 class Store:
-    def __init__(self, path):
+    def __init__(self, path, readonly=False):
+        self.readonly = readonly
+        if readonly:
+            self.db = sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=30)
+            self.db.row_factory = sqlite3.Row
+            return
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.db = sqlite3.connect(path, timeout=30)
         self.db.row_factory = sqlite3.Row
@@ -420,6 +425,13 @@ def nm_tokens(row):
     return fresh, cached, write, values['output']
 
 
+def nm_context(db):
+    runs = {r['id']: dict(r) for r in db.execute(
+        'SELECT id, repo_id, branch, worktree_dir, created_at, updated_at FROM runs')}
+    links = [dict(r) for r in db.execute('SELECT run_id, agent, session_id FROM run_agent_sessions')]
+    return runs, links
+
+
 def import_nm(store, path):
     if not path.exists():
         store.warn(path, 'No-mistakes ledger absent')
@@ -427,10 +439,8 @@ def import_nm(store, path):
     with closing(sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
         db.row_factory = sqlite3.Row
         db.execute('BEGIN')
-        runs = {r['id']: dict(r) for r in db.execute(
-            'SELECT id, repo_id, branch, worktree_dir, created_at, updated_at FROM runs')}
+        runs, links = nm_context(db)
         repos = {r['id']: r['working_path'] for r in db.execute('SELECT id, working_path FROM repos')}
-        links = [dict(r) for r in db.execute('SELECT run_id, agent, session_id FROM run_agent_sessions')]
         logs = {}
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='step_results'").fetchone():
             logs = {(r['run_id'], r['step_name']): r['log_path'] for r in db.execute(
@@ -623,13 +633,13 @@ def rate_fit(store, facts, snapshots, now):
                    fitted_at=now, price_version=PRICES['version'])
         # Do not freeze the cold-start seed for a week: switch as soon as enough
         # pairs exist, then hold that measured fit until the next weekly refit.
-        if measured:
+        if measured and not store.readonly:
             store.put('fits', f'{provider}:{week}', fit)
         fits[provider] = fit
     return fits
 
 
-def build_report(store, facts, excluded, output, now):
+def report_data(store, facts, excluded, now):
     for fact in facts:
         fact['priced'] = price(fact)
     snapshots = store.rows('quota')
@@ -660,12 +670,82 @@ def build_report(store, facts, excluded, output, now):
         window['allocation_rate'] = window['used'] / priced if preferred and priced else None
         windows.append(window)
     health = [{'source': Path(r[0]).name, 'warning': r[1]} for r in store.db.execute('SELECT path, code FROM health ORDER BY path, code')]
-    payload = dict(generated=now, roles=ROLES, windows=windows, facts=facts, excluded=excluded,
-                   health=health, prices=PRICES['version'], seeds=PRICES['seed'])
+    return dict(generated=now, roles=ROLES, windows=windows, facts=facts, excluded=excluded,
+                health=health, prices=PRICES['version'], seeds=PRICES['seed'])
+
+
+def build_report(store, facts, excluded, output, now):
+    payload = report_data(store, facts, excluded, now)
     text = json.dumps(payload, separators=(',', ':'), ensure_ascii=True).replace('<', '\\u003c').replace('&', '\\u0026')
     template = (HERE / 'usage-report.html').read_text()
     atomic(output, re.sub(r'/\*ACCOUNTING_DATA\*/\s*null', lambda _: text, template).encode())
     return payload
+
+
+def text_report(payload):
+    def safe(value):
+        return ''.join(c if 32 <= ord(c) < 127 else '?' for c in str(value))
+
+    def percent(value, partial=False):
+        return 'Unknown' if value is None else f'{value:.2f}%' + (' *' if partial else '')
+
+    sessions = {}
+    windows = {w['provider']: w for w in payload['windows']}
+    for fact in payload['facts']:
+        window = windows.get(fact['provider'])
+        if fact['time'] is None or not (
+                window['start'] <= fact['time'] < window['end'] if window else
+                fact['time'] >= payload['generated'] - 7*86400):
+            continue
+        source = 'codex' if fact['source'].startswith('codex') else fact['source']
+        key = (source, fact['session'], fact['provider'], fact['role'])
+        session = sessions.setdefault(key, dict(provider=fact['provider'], role=fact['role'],
+            session=fact['session'], task=None, tokens=0, partial=False, priced=0, unpriced=False))
+        values = [fact[k] for k in FIELDS]
+        session['tokens'] += (sum(values) if all(v is not None for v in values) else
+                              fact['reported'] if fact['reported'] is not None else sum(v or 0 for v in values))
+        session['partial'] |= any(v is None for v in values)
+        session['priced'] += fact['priced'] or 0
+        session['unpriced'] |= fact['priced'] is None
+        session['task'] = session['task'] or fact.get('task')
+    for session in sessions.values():
+        window = windows.get(session['provider'])
+        session['quota'] = (session['priced'] * window['allocation_rate'] if window and window['available']
+            and window['allocation_rate'] is not None and (not session['unpriced'] or session['priced'] > 0) else None)
+        session['partial_quota'] = session['unpriced'] and session['priced'] > 0
+
+    lines = ['Local usage (UTC; quota shares are estimates)']
+    for window in payload['windows']:
+        provider = window['provider']
+        rows = [s for s in sessions.values() if s['provider'] == provider]
+        if window['available']:
+            end = dt.datetime.fromtimestamp(window['end'], dt.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+            lines.append(f"{provider.title()}: {percent(window['used'])} used, {percent(window['remaining'])} left; "
+                         f"{safe(window['label'])} ends {end}")
+            roles = []
+            for role in payload['roles']:
+                rr = [s for s in rows if s['role'] == role]
+                share = sum(s['quota'] or 0 for s in rr)
+                if share > 0:
+                    partial = any(s['quota'] is None or s['partial_quota'] for s in rr)
+                    roles.append(f"{role}: {percent(share, partial)} ({len(rr)})")
+            lines.extend('  ' + '; '.join(roles[i:i+2]) for i in range(0, len(roles), 2))
+        else:
+            lines.append(f"{provider.title()}: quota unavailable; last 7 days, {sum(s['tokens'] for s in rows):,} tokens")
+    lines.extend(['Role counts in parentheses are sessions.', '', 'Top 10 sessions (current windows; unavailable providers: last 7 days)',
+                  f"{'Tokens':>13} {'Est. quota':>11} {'Provider':<8} {'Role':<16} Task / session"])
+    top = sorted(sessions.items(), key=lambda item: (-item[1]['tokens'], item[0]))[:10]
+    for _, session in top:
+        tokens = f"{session['tokens']:,}" + (' *' if session['partial'] else '')
+        share = percent(session['quota'], session['partial_quota'])
+        identifier = safe(session['task']) if session['task'] else safe(session['session'])[:12]
+        lines.append(f"{tokens:>13} {share:>11} {safe(session['provider']):<8} {safe(session['role']):<16} {identifier}")
+    if not top:
+        lines.append('No sessions in these windows.')
+    lines.extend(['', '* Incomplete token or priced coverage; Unknown = no quota estimate.',
+                  'Account-wide allocation, not exact session use; other devices and missing logs can bias it.',
+                  'Rates may be seeded or uncalibrated; run refresh first for fresh accounting and quota.'])
+    return '\n'.join(lines)
 
 
 def launch_agent(args, home):
@@ -697,7 +777,7 @@ def launch_agent(args, home):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Import local token accounting and generate a private, offline HTML report.',
+    parser = argparse.ArgumentParser(description='Import local token accounting and generate private HTML or plain-text reports.',
         epilog='Only accounting fields and source locators are stored. No prompts, responses, credentials, or account IDs. '
         'Incremental JSONL cursors and facts commit together; partial final lines wait. '
         'No-mistakes invocation deltas own proven overlapping native sessions; possible overlaps are excluded and counted. '
@@ -706,7 +786,8 @@ def main():
         'No server or launchctl action runs. install/uninstall only write/remove the home-specific plist. '
         'Run refresh hourly via launchd after reviewing the printed bootstrap command. '
         'Source overrides replace defaults and support isolated fixtures.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('command', choices=['import', 'report', 'sample', 'refresh', 'install', 'uninstall'])
+    parser.add_argument('command', choices=['import', 'report', 'text', 'sample', 'refresh', 'install', 'uninstall'],
+        help='text prints existing accounting only: no import, quota sampling, HTML, or store writes; refresh updates first')
     parser.add_argument('--pi-root', type=Path, action='append', help='Pi JSONL root (repeatable)')
     parser.add_argument('--supervision-root', type=Path, action='append', help='Supervision JSONL root (repeatable)')
     parser.add_argument('--claude-root', type=Path, action='append', help='Claude projects JSONL root')
@@ -728,7 +809,12 @@ def main():
     if args.command in ['install', 'uninstall']:
         launch_agent(args, home)
         return
-    store = Store(data/'usage.sqlite')
+    try:
+        store = Store(data/'usage.sqlite', readonly=args.command == 'text')
+    except sqlite3.OperationalError:
+        if args.command == 'text':
+            parser.exit(1, 'No readable usage store; run fm-usage-report.sh refresh first.\n')
+        raise
     now = args.now if args.now is not None else time.time()
     runs, links = [], []
     with store.db:
@@ -753,6 +839,18 @@ def main():
                 runs, links = import_nm(store, nm_path)
             except sqlite3.Error:
                 store.warn(nm_path, 'No-mistakes schema unavailable; import incomplete')
+        if args.command == 'text':
+            # Reconcile overlap metadata without importing invocation accounting.
+            if nm_path.exists():
+                try:
+                    with closing(sqlite3.connect(nm_path.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as db:
+                        db.row_factory = sqlite3.Row
+                        run_map, links = nm_context(db)
+                        runs = list(run_map.values())
+                except sqlite3.Error:
+                    runs, links = [], []
+            facts, excluded = attributed(store, store.rows('facts'), runs, links, home)
+            print(text_report(report_data(store, facts, excluded, now)))
         if args.command in ['sample', 'refresh']:
             sampled_facts, _ = attributed(store, store.rows('facts'), runs, links, home)
             sample(store, now, sampled_facts)
@@ -762,7 +860,7 @@ def main():
             render_now = now if args.now is not None else time.time()
             payload = build_report(store, facts, excluded, output, render_now)
             print(f'Report: {output} ({len(payload["facts"])} accounting facts; private)')
-        else:
+        elif args.command != 'text':
             print(f'{args.command}: accounting records saved')
     store.db.close()
 

@@ -787,7 +787,8 @@ The flag is a home-local preference and is not inherited by secondmate homes.
 ## Local usage report
 
 `bin/fm-usage-report.sh` imports local accounting into `data/usage-report/usage.sqlite` and renders `data/usage-report/index.html` under the effective `FM_HOME` (or `FM_DATA_OVERRIDE`).
-Both files are private and gitignored; do not publish the HTML or serve that directory.
+Both files and the text output are private; the files are gitignored.
+Do not publish real usage output or serve that directory.
 The offline report shows each provider's current supported quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
 Supported quota scopes are weekly windows and bounded credits windows; without a usable reading, that provider shows the last seven days of local tokens and role token shares instead of quota estimates.
 Role links open the all-sessions page filtered to that role across providers; token and estimated-quota headers control sorting, and session rows open details.
@@ -796,6 +797,10 @@ Unknown attribution remains unassigned.
 
 The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, quota sampling, and launchd definition commands.
 Its `refresh` command imports, samples through `quota-axi` without credential refresh or permission prompts, and renders the report.
+Its `text` command prints a compact plain-text overview and the top ten sessions using the same stored accounting, window selection, and quota allocation as the HTML.
+It does not import usage, sample quota, write the store, or render HTML; run `refresh` first when fresh data is needed.
+Text may read no-mistakes run/session metadata to reconcile overlap, but never imports invocation usage.
+Role rows show nonzero estimated quota shares and session counts; unavailable providers retain the seven-day token fallback, and asterisks flag incomplete coverage.
 Its `install` and `uninstall` commands only write and remove a home-specific user-agent definition; they never load or unload it.
 Review and run the printed `launchctl` command yourself to enable the hourly job, or unload it before uninstalling.
 No background job runs until then.
