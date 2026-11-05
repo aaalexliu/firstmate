@@ -788,8 +788,11 @@ The flag is a home-local preference and is not inherited by secondmate homes.
 
 `bin/fm-usage-report.sh` imports local accounting into `data/usage-report/usage.sqlite` and renders `data/usage-report/index.html` under the effective `FM_HOME` (or `FM_DATA_OVERRIDE`).
 Both files are private and gitignored; do not publish the HTML or serve that directory.
-The offline report shows each provider's current quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
-Unknown attribution remains unassigned; missing quota falls back to role shares of local tokens.
+The offline report shows each provider's current supported quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
+Supported quota scopes are weekly windows and bounded credits windows; without a usable reading, that provider shows the last seven days of local tokens and role token shares instead of quota estimates.
+Role links open the all-sessions page filtered to that role across providers; token and estimated-quota headers control sorting, and session rows open details.
+A session that changes provider or role has a separate row for each; reported times span the selected usage events, not active model time.
+Unknown attribution remains unassigned.
 
 The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, quota sampling, and launchd definition commands.
 Its `refresh` command imports, samples through `quota-axi` without credential refresh or permission prompts, and renders the report.
@@ -799,7 +802,7 @@ No background job runs until then.
 
 Estimates use the versioned, cited API rates in `bin/usage-prices.json`, not actual subscription prices.
 The report shows the local rate, usable hourly-pair count, seed status, and window scaling.
-Three fresh hourly pairs from the same quota segment allow a measured rate; measured rates refit weekly.
+Three fresh hourly pairs with positive total quota movement allow a measured rate; each pair must stay within one quota segment, and measured rates refit weekly.
 The Claude cold-start seed is a community large-plan estimate, not this account's measured allowance.
 Without a published seed, the report can allocate known quota by relative priced usage but cannot claim a calibrated token-to-quota rate.
 Account-wide scaling assigns the observed reading to local priced records, so other devices, API traffic, missing logs, and account changes can bias every estimate.
