@@ -459,7 +459,7 @@ def import_nm(store, path):
 
 
 def attributed(store, facts, runs, links, home):
-    bindings = store.rows('bindings')
+    bindings = [b for b in store.rows('bindings') if b.get('task')]
     native_logs = {f['session']: f['locator'] for f in facts if f['source'] != 'no-mistakes'}
     exact_nm = {l['session_id'] for l in links}
     exact_nm.update(sid for f in facts if f['source'] == 'no-mistakes' for sid in f.get('native_sessions', []))
@@ -480,8 +480,7 @@ def attributed(store, facts, runs, links, home):
         if f['source'] == 'pi' and f['role'] == 'unassigned' and same_path(f['cwd'], home):
             f.update(role='main chat', evidence='Primary Pi session in the Firstmate home cwd; not the supervision store',
                      project=str(home))
-        explicit = [b for b in bindings if b.get('session') == f['session'] and b.get('source', f['source']) == f['source']]
-        manual = [b for b in explicit if not b.get('task')]
+        session_bindings = [b for b in bindings if b.get('session') == f['session'] and b.get('source', f['source']) == f['source']]
         bounded = [b for b in bindings if not b.get('session') and f['cwd'] and b.get('cwd') == f['cwd']
                    and f.get('session_start', f['start']) is not None
                    and b['start'] <= f.get('session_start', f['start'])
@@ -497,7 +496,7 @@ def attributed(store, facts, runs, links, home):
                        and b.get('branch') and b['branch'] == f.get('branch') and f['time'] is not None
                        and f['start'] is not None and b['start'] <= f['start']
                        and b['start'] <= f['time'] < (b.get('end') or float('inf'))]
-        matches = manual or explicit or bounded
+        matches = session_bindings or bounded
         identities = {(b['role'], b.get('task'), b.get('project')) for b in matches}
         if len(identities) == 1:
             b = next((b for b in matches if b.get('origin') == 'pi-launch'), matches[0])
@@ -600,7 +599,8 @@ def rate_fit(store, facts, snapshots, now):
                          and now - 28*86400 <= q['generated'] <= now], key=lambda q: q['generated'])
         for a, b in zip(points, points[1:]):
             gap = b['generated'] - a['generated']
-            if (a.get('window'), a.get('end')) != (b.get('window'), b.get('end')) or not 1800 <= gap <= 5400:
+            if (a['window'] != b['window'] or abs(a['end'] - b['end']) > 5
+                    or not 1800 <= gap <= 5400):
                 continue
             delta = a['remaining'] - b['remaining']
             interval = [f for f in facts if f['provider'] == provider and f['time'] is not None
@@ -700,7 +700,7 @@ def main():
         'No server or launchctl action runs. install/uninstall only write/remove the home-specific plist. '
         'Run refresh hourly via launchd after reviewing the printed bootstrap command. '
         'Source overrides replace defaults and support isolated fixtures.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('command', choices=['import', 'report', 'sample', 'refresh', 'install', 'uninstall', 'bind'])
+    parser.add_argument('command', choices=['import', 'report', 'sample', 'refresh', 'install', 'uninstall'])
     parser.add_argument('--pi-root', type=Path, action='append', help='Pi JSONL root (repeatable)')
     parser.add_argument('--supervision-root', type=Path, action='append', help='Supervision JSONL root (repeatable)')
     parser.add_argument('--claude-root', type=Path, action='append', help='Claude projects JSONL root')
@@ -710,9 +710,6 @@ def main():
     parser.add_argument('--output', type=Path, help='Private offline HTML destination')
     parser.add_argument('--now', type=float, help='Fixed Unix time for deterministic accounting replay')
     parser.add_argument('--launch-agents', type=Path, default=Path.home()/'Library/LaunchAgents')
-    parser.add_argument('--source', choices=['pi', 'claude', 'codex-compaction', 'codex-cumulative'])
-    parser.add_argument('--session', help='Exact native session ID for a retained role binding')
-    parser.add_argument('--role', choices=ROLES)
     args = parser.parse_args()
     if args.now is not None and not math.isfinite(args.now):
         parser.error('--now must be a finite Unix timestamp')
@@ -729,12 +726,6 @@ def main():
     now = args.now if args.now is not None else time.time()
     runs, links = [], []
     with store.db:
-        if args.command == 'bind':
-            if not all([args.source, args.session, args.role]):
-                parser.error('bind requires --source, --session, and --role')
-            key = digest('explicit', args.source, args.session)
-            store.put('bindings', key, dict(key=key, source=args.source, session=args.session, role=args.role,
-                                           evidence='Explicit role binding supplied to fm-usage-report bind'))
         if args.command in ['import', 'refresh']:
             capture_tasks(store, state_root, now)
             catalog = task_catalog(task_data_root, projects_root)

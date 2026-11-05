@@ -370,10 +370,11 @@ class UsageReport(unittest.TestCase):
         facts=self.report()['facts']
         self.assertEqual({f['session']:f['role'] for f in facts},{'new':'scout','before-reuse':'unassigned'})
         path.unlink()
+        with sqlite3.connect(self.home/'data/usage-report/usage.sqlite') as db:
+            db.execute('INSERT INTO bindings VALUES (?, ?)', ('legacy-manual',json.dumps(dict(
+                source='pi',session='before-reuse',role='main chat',evidence='Legacy manual override'))))
         self.cli('import')
         self.assertEqual({f['session']:f['role'] for f in self.report()['facts']},{'new':'scout','before-reuse':'unassigned'})
-        self.cli('bind','--source','pi','--session','before-reuse','--role','main chat')
-        self.assertEqual(next(f for f in self.report()['facts'] if f['session']=='before-reuse')['role'],'main chat')
 
     def test_quota_sampling_privacy_fallback_and_scale(self):
         self.write('pi',self.pi())
@@ -388,6 +389,10 @@ class UsageReport(unittest.TestCase):
         self.assertFalse(grok['available'])
         self.assertNotIn('SENSITIVE_ACCOUNT',json.dumps(self.records('quota')))
         before=len(self.records('quota'));self.cli('sample');self.assertEqual(len(self.records('quota')),before)
+        self.quota['providers'][0]['windows'][0]['resetsAt']=iso(self.now+6*86400+0.36)
+        self.quota_file.write_text(json.dumps(self.quota))
+        self.cli('sample')
+        self.assertEqual(len(self.records('quota')),before+1)
         self.assertEqual((self.home/'data/usage-report/usage.sqlite').stat().st_mode & 0o777,0o600)
 
     def test_weekly_fit_requires_hourly_fresh_same_window_pairs(self):
@@ -403,7 +408,7 @@ class UsageReport(unittest.TestCase):
             t=self.now-(5-i)*3600
             q=dict(generatedAt=iso(t),providers=[dict(provider='claude',state=dict(status='fresh',stale=False),
                 windows=[dict(id='weekly',label='week',kind='weekly',startsAt=iso(end-7*86400),
-                              resetsAt=iso(end),percentRemaining=90-i*2)])])
+                              resetsAt=iso(end+[0, 0.36, 1.24, -0.36, 0][i]),percentRemaining=90-i*2)])])
             self.quota_file.write_text(json.dumps(q));self.cli('sample')
         report=self.report()
         fit=next(w['fit'] for w in report['windows'] if w['provider']=='claude')
@@ -414,14 +419,14 @@ class UsageReport(unittest.TestCase):
         self.cli('report')
         self.assertEqual(next(w['fit'] for w in self.report()['windows'] if w['provider']=='claude'),fit)
 
-    def test_quota_resets_and_missing_hours_do_not_train_a_rate(self):
+    def test_quota_resets_do_not_train_a_rate(self):
         for i in range(5):
-            t=self.now-(5-i)*7200
+            t=self.now-18000+i*3600
             rows=self.pi(str(i),ts=t+300)
             self.write('pi',rows,str(i)+'.jsonl')
             q=dict(generatedAt=iso(t),providers=[dict(provider='claude',state=dict(status='fresh',stale=False),
                 windows=[dict(id='weekly',label='week',kind='weekly',startsAt=iso(t-10000),
-                              resetsAt=iso(t+604800),percentRemaining=90-i*2)])])
+                              resetsAt=iso(self.now+(i+1)*604800),percentRemaining=90-i*2)])])
             self.quota_file.write_text(json.dumps(q));self.cli('sample')
         self.cli('import')
         fit=next(w['fit'] for w in self.report()['windows'] if w['provider']=='claude')

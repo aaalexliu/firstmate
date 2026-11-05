@@ -791,7 +791,7 @@ Both files are private and gitignored; do not publish the HTML or serve that dir
 The offline report shows each provider's current quota window, role estimates, all sessions ranked by tokens, and session details with local source links.
 Unknown attribution remains unassigned; missing quota falls back to role shares of local tokens.
 
-The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, explicit role bindings, quota sampling, and launchd definition commands.
+The executable's `--help` owns source roots, overrides, incremental import, overlap accounting, quota sampling, and launchd definition commands.
 Its `refresh` command imports, samples through `quota-axi` without credential refresh or permission prompts, and renders the report.
 Its `install` and `uninstall` commands only write and remove a home-specific user-agent definition; they never load or unload it.
 Review and run the printed `launchctl` command yourself to enable the hourly job, or unload it before uninstalling.

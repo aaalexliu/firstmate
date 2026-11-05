@@ -61,8 +61,7 @@
         text-decoration: underline;
       }
       a:focus-visible,
-      button:focus-visible,
-      select:focus-visible {
+      button:focus-visible {
         outline: 3px solid #eaa944;
         outline-offset: 3px;
       }
@@ -87,7 +86,6 @@
         flex-wrap: wrap;
         margin: 22px 0;
       }
-      select,
       button {
         font: inherit;
         color: inherit;
@@ -266,9 +264,6 @@
           align-items: flex-start;
           flex-direction: column;
         }
-        select {
-          max-width: 100%;
-        }
       }
     </style>
   </head>
@@ -330,8 +325,6 @@
           : (f.reported ?? vals.reduce((a, b) => a + (b ?? 0), 0));
       }
       function selection() {
-        const sel = params().get("window") || "current";
-        if (sel === "all") return DATA.facts;
         return DATA.facts.filter((f) => {
           const w = windowFor(f.provider);
           return (
@@ -342,7 +335,7 @@
           );
         });
       }
-      function groups(facts, current = false) {
+      function groups(facts) {
         const map = new Map();
         for (const f of facts) {
           const key = JSON.stringify([
@@ -396,8 +389,7 @@
           s.quota =
             w?.available &&
             w.allocation_rate != null &&
-            (!s.unpriced || s.priced > 0) &&
-            (current || params().get("window") !== "all")
+            (!s.unpriced || s.priced > 0)
               ? s.priced * w.allocation_rate
               : null;
           s.partialQuota = s.unpriced && s.priced > 0;
@@ -410,13 +402,7 @@
         return groups(selection()).filter((s) => !role || s.role === role);
       }
       function toolbar() {
-        const selected = params().get("window") || "current";
-        return `<div class="toolbar"><label>Window <select id="window"><option value="current" ${selected === "current" ? "selected" : ""}>Current provider windows</option><option value="all" ${selected === "all" ? "selected" : ""}>All imported history</option></select></label>${params().get("role") ? `<span>Role: <strong>${esc(params().get("role"))}</strong> · ${link("Clear", { role: null })}</span>` : ""}</div>`;
-      }
-      function bindControls() {
-        document.getElementById("window")?.addEventListener("change", (e) => {
-          location.hash = href({ window: e.target.value, session: null });
-        });
+        return params().get("role") ? `<div class="toolbar">Role: <strong>${esc(params().get("role"))}</strong> · ${link("Clear", { role: null })}</div>` : "";
       }
       function table(sessions, top = false) {
         const sort = top ? "tokens" : params().get("sort") || "tokens",
@@ -451,31 +437,19 @@
               tt = rr.reduce((v, s) => v + s.tokens, 0),
               sum = rr.reduce((v, s) => v + (s.quota ?? 0), 0);
             const unknown = rr.some((s) => s.quota == null);
-            return `<tr><td>${link(role, { page: "sessions", role, session: null, window: "current" })}</td><td class="number">${w.available ? (rr.length && rr.every((s) => s.quota == null) ? "Unknown" : pct(sum) + (unknown || rr.some((s) => s.partialQuota) ? " *" : "")) : pct(tokens ? (tt / tokens) * 100 : 0)}</td><td class="number">${rr.length}</td></tr>`;
+            return `<tr><td>${link(role, { page: "sessions", role, session: null })}</td><td class="number">${w.available ? (rr.length && rr.every((s) => s.quota == null) ? "Unknown" : pct(sum) + (unknown || rr.some((s) => s.partialQuota) ? " *" : "")) : pct(tokens ? (tt / tokens) * 100 : 0)}</td><td class="number">${rr.length}</td></tr>`;
           })
           .join(
             "",
           )}</tbody></table></div><p class="status">${esc(rate)}<br>${fit.samples} usable hourly pairs · ${fit.rate == null ? "not yet measured" : fit.seeded ? "seed / not yet measured" : "weekly fit"}<br>${w.scale != null ? "Window scaling ×" + w.scale.toFixed(3) : "No calibrated rate scaling"}${w.unpriced ? "<br>" + w.unpriced + " unpriced or partial facts" : ""}${!w.available ? "<br>" + esc(w.status) : ""}</p></section>`;
       }
       function overview() {
-        const all = groups(
-          DATA.facts.filter((f) => {
-            const w = windowFor(f.provider);
-            return (
-              f.time != null &&
-              (w
-                ? f.time >= w.start && f.time < w.end
-                : f.time >= DATA.generated - 7 * 86400)
-            );
-          }),
-          true,
-        );
-        app.innerHTML = `<h1>Local usage report</h1><p class="muted">Quota estimates by role, with a direct path to each session.</p><div class="providers">${DATA.windows.map((w) => providerCard(w, all)).join("")}</div><p class="note">Estimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned.</p><section class="panel"><h2>Top sessions across all providers</h2><p class="muted">Current provider windows · ranked by total tokens, including cache reads</p>${table(all, true)}<p>${link("View all sessions", { page: "sessions", role: null, session: null, window: "current", sort: "tokens", dir: "desc" })}</p></section><details class="panel"><summary>Accounting coverage and source health</summary><p>One no-mistakes invocation owns each proven overlapping native session. Invocation totals use completion time and base price rates; per-request context tiers are unknown. Cache writes without a retention split use the 5-minute rate.</p><p>Native pipeline facts excluded: ${DATA.excluded.native_pipeline}. Possible pipeline overlaps excluded for reconciliation: ${DATA.excluded.possible_pipeline}.</p><p>Unknown provider facts: ${DATA.facts.filter((f) => f.provider === "unknown").length}. Partial token facts: ${DATA.facts.filter((f) => ["fresh", "read", "write", "output"].some((k) => f[k] == null)).length}. Unpriced facts: ${DATA.facts.filter((f) => f.priced == null).length}.</p>${DATA.excluded.possible_records.length ? '<details><summary>Sessions excluded as possible pipeline overlaps</summary><ul>' + DATA.excluded.possible_records.map(r => `<li>${esc(r.source)} / ${esc(r.session)} · ${fileLink(r.locator, 'Open source for reconciliation')}</li>`).join('') + '</ul></details>' : ''}${DATA.health.length ? "<ul>" + DATA.health.map((h) => `<li>${esc(h.source)}: ${esc(h.warning)}</li>`).join("") + "</ul>" : "<p>No source warnings.</p>"}<p>Failures and missing hours are not backfilled. Reused or stale quota points do not train the rate. Fits require three fresh hourly pairs with positive total quota movement from the same window segment and refit weekly.</p></details>`;
+        const all = groups(selection());
+        app.innerHTML = `<h1>Local usage report</h1><p class="muted">Quota estimates by role, with a direct path to each session.</p><div class="providers">${DATA.windows.map((w) => providerCard(w, all)).join("")}</div><p class="note">Estimates allocate the provider’s whole observed usage to this machine’s priced records. Other devices, API traffic, missing logs, and account or plan changes can skew them. Provider family is not proof of subscription billing. Percentages are not measured session quotas. An asterisk marks incomplete priced coverage. Unknown attribution stays unassigned.</p><section class="panel"><h2>Top sessions across all providers</h2><p class="muted">Current provider windows · ranked by total tokens, including cache reads</p>${table(all, true)}<p>${link("View all sessions", { page: "sessions", role: null, session: null, sort: "tokens", dir: "desc" })}</p></section><details class="panel"><summary>Accounting coverage and source health</summary><p>One no-mistakes invocation owns each proven overlapping native session. Invocation totals use completion time and base price rates; per-request context tiers are unknown. Cache writes without a retention split use the 5-minute rate.</p><p>Native pipeline facts excluded: ${DATA.excluded.native_pipeline}. Possible pipeline overlaps excluded for reconciliation: ${DATA.excluded.possible_pipeline}.</p><p>Unknown provider facts: ${DATA.facts.filter((f) => f.provider === "unknown").length}. Partial token facts: ${DATA.facts.filter((f) => ["fresh", "read", "write", "output"].some((k) => f[k] == null)).length}. Unpriced facts: ${DATA.facts.filter((f) => f.priced == null).length}.</p>${DATA.excluded.possible_records.length ? '<details><summary>Sessions excluded as possible pipeline overlaps</summary><ul>' + DATA.excluded.possible_records.map(r => `<li>${esc(r.source)} / ${esc(r.session)} · ${fileLink(r.locator, 'Open source for reconciliation')}</li>`).join('') + '</ul></details>' : ''}${DATA.health.length ? "<ul>" + DATA.health.map((h) => `<li>${esc(h.source)}: ${esc(h.warning)}</li>`).join("") + "</ul>" : "<p>No source warnings.</p>"}<p>Failures and missing hours are not backfilled. Reused or stale quota points do not train the rate. Fits require three fresh hourly pairs with positive total quota movement from the same window segment and refit weekly.</p></details>`;
       }
       function sessions() {
         const rows = filtered();
-        app.innerHTML = `<nav class="crumb">${link("Overview", { page: null, session: null, role: null })}</nav><h1>All sessions</h1><p class="muted">${n.format(rows.length)} sessions · ${n.format(rows.reduce((a, b) => a + b.tokens, 0))} total tokens · default rank: most tokens</p>${toolbar()}<section class="panel">${table(rows)}</section><p class="note">* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero. All-history rows do not receive a current-window quota estimate.</p>`;
-        bindControls();
+        app.innerHTML = `<nav class="crumb">${link("Overview", { page: null, session: null, role: null })}</nav><h1>All sessions</h1><p class="muted">${n.format(rows.length)} sessions · ${n.format(rows.reduce((a, b) => a + b.tokens, 0))} total tokens · default rank: most tokens</p>${toolbar()}<section class="panel">${table(rows)}</section><p class="note">* Partial token components: a reported total is used when available; otherwise the known sum is a lower bound. A session that changes provider or role has a separate row for each. “Unknown” quota is not zero. * Quota estimates use only known priced facts; unpriced usage is not zero.</p>`;
       }
       function fileLink(path, label) {
         if (!path)
