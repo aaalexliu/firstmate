@@ -195,7 +195,7 @@ EOF
 # one of these DOD blocks, since a broken heredoc corrupts or empties the
 # generated brief content, not just the script's own syntax.
 test_ship_modes_generate_clean_briefs() {
-  local home id mode brief status
+  local home id mode brief status craft
   home="$TMP_ROOT/ship-home"
   write_registry "$home"
 
@@ -213,6 +213,31 @@ test_ship_modes_generate_clean_briefs() {
     assert_grep "{FIRSTMATE_SPEC}" "$brief" "$id: brief missing the {FIRSTMATE_SPEC} placeholder"
     assert_grep "## Captain's intent" "$brief" "$id: brief missing Captain's intent subsection"
     assert_grep "## Firstmate spec" "$brief" "$id: brief missing Firstmate spec subsection"
+    craft=$(awk '/^# Working craft$/ { inside=1; next } inside && /^# / { exit } inside { print }' "$brief")
+    [ -n "$craft" ] || fail "$id: ship brief missing Working craft section"
+    [ "${#craft}" -le 1800 ] || fail "$id: Working craft exceeds its short brief-text budget"
+    awk '/^# Working craft$/ { craft++ } /^# Rules$/ { exit (craft == 1 ? 0 : 1) }' "$brief" \
+      || fail "$id: Working craft must appear once before Rules"
+    assert_contains "$craft" 'write the goal and the smallest change' "$id: missing goal and smallest-change guidance"
+    assert_contains "$craft" 'first working status or notes' "$id: missing place to record the goal"
+    assert_contains "$craft" 'name the data shape or domain model before writing code' "$id: missing model-first guidance"
+    assert_contains "$craft" 'illegal states unrepresentable' "$id: missing domain-state guidance"
+    assert_contains "$craft" 'no new layer, abstraction, flag, framework, compatibility shim or speculative option' "$id: missing scope restraint"
+    assert_contains "$craft" 'one concern per change' "$id: missing single-concern guidance"
+    assert_contains "$craft" 'unless the current change cannot work without it' "$id: missing prerequisite exception"
+    assert_contains "$craft" 'needs-decision [at=<epoch>] [key=scope-<slug>]: {question}' "$id: missing keyed scope escalation"
+    assert_contains "$craft" 'and stop for firstmate' "$id: missing scope decision wait"
+    assert_contains "$craft" 'separate shippable changes' "$id: missing follow-up separation"
+    assert_contains "$craft" 'reproduce it first on the surface the user sees' "$id: missing bug reproduction guidance"
+    assert_contains "$craft" 'Revert changes motivated by a guess once evidence refutes it' "$id: missing refuted-guess cleanup"
+    assert_contains "$craft" 'Test behavior, not implementation details' "$id: missing behavior-test guidance"
+    assert_contains "$craft" 'stand-in, mock or wrong surface, or an inconclusive result' "$id: missing proof limitations"
+    assert_contains "$craft" "PR body's Known gaps section" "$id: missing PR gap destination"
+    assert_contains "$craft" 'hand gaps to the pipeline if it owns the PR' "$id: missing pipeline gap handoff"
+    assert_contains "$craft" 'in the done status for local-only' "$id: missing local-only gap destination"
+    assert_contains "$craft" 'read your full diff once' "$id: missing self-review guidance"
+    assert_contains "$craft" 'needless layers, dead code, narrative comments, suppressions and workarounds, and remove them' "$id: missing diff cleanup guidance"
+    assert_contains "$craft" 'running or reading something when you can, instead of asking' "$id: missing evidence-first question guidance"
     assert_grep 'never a bare number such as "PR 108"' "$brief" "$id: brief missing the full-PR-URL rule"
     assert_grep "mid-task \`working:\` line (including setup complete) is nonterminal" "$brief" \
       "$id: brief missing nonterminal working:/setup-complete gate protection"
@@ -1254,6 +1279,8 @@ test_scout_and_secondmate_scaffold() {
   assert_grep "## Captain's intent" "$brief" "scout brief missing Captain's intent subsection"
   assert_grep "## Firstmate spec" "$brief" "scout brief missing Firstmate spec subsection"
   assert_grep "{FIRSTMATE_SPEC}" "$brief" "scout brief missing the spec placeholder"
+  assert_no_grep '# Working craft' "$brief" "scout brief must not include ship working craft"
+  assert_no_grep 'write the goal and the smallest change' "$brief" "scout brief must not leak ship working-craft text"
 
   FM_SECONDMATE_CHARTER='Supervise the alpha domain.' \
     FM_HOME="$BRIEF_HOME" "$ROOT/bin/fm-brief.sh" brief-sm-q6 --secondmate alpha >/dev/null 2>&1 \
@@ -1266,6 +1293,8 @@ test_scout_and_secondmate_scaffold() {
     "secondmate charter must not grow ship/scout Task subsections"
   assert_no_grep "{FIRSTMATE_SPEC}" "$brief" \
     "secondmate charter must not carry the Firstmate spec placeholder"
+  assert_no_grep '# Working craft' "$brief" "secondmate charter must not include ship working craft"
+  assert_no_grep 'write the goal and the smallest change' "$brief" "secondmate charter must not leak ship working-craft text"
   pass "fm-brief: scout and secondmate code paths still scaffold well-formed briefs"
 }
 
