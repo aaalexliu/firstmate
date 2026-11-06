@@ -6282,7 +6282,7 @@ if (globalThis.__fmPrompts.length !== 3) throw new Error("wake did not reach pri
 await fire("session_shutdown", {}, defaultSessionCtx);
 JS
   PLUGIN="$repo/.pi/extensions/fm-branch-supervision.ts" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
-    PSTACK_SUBAGENT_DEPTH=0 DRIVER_PRELUDE="$DRIVER_PRELUDE" node "$driver" > "$TMP_ROOT/node-output" 2>&1
+    DRIVER_PRELUDE="$DRIVER_PRELUDE" node "$driver" > "$TMP_ROOT/node-output" 2>&1
   status=$?
   out=$(cat "$TMP_ROOT/node-output")
   expect_code 0 "$status" "a pstack helper must not replace or retire primary branch ownership: $out"
@@ -6296,7 +6296,7 @@ test_primary_repairs_lost_branch_owner_without_repeating_activation_cleanup() {
   mkdir -p "$home/state" "$home/config"
   install_pi_branch_extension_fixture "$repo"
   PLUGIN="$repo/.pi/extensions/fm-branch-supervision.ts" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
-    PSTACK_SUBAGENT_DEPTH=0 DRIVER_PRELUDE="$DRIVER_PRELUDE" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'JS'
+    DRIVER_PRELUDE="$DRIVER_PRELUDE" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'JS'
 const prelude = process.env.DRIVER_PRELUDE;
 await eval(`(async () => { ${prelude}; globalThis.__t = { fire, dispatch, defaultSessionCtx, home }; })()`);
 const { fire, dispatch, defaultSessionCtx, home } = globalThis.__t;
