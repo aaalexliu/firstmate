@@ -307,7 +307,10 @@ That queue is what preserves these guarantees:
 - The durable append happens before anything visible.
 - Deliveries run one at a time, in sequence order.
 - The read cursor advances before the next reader sees a row.
-- Each generation gets one ownership activation.
+- Each generation gets one lease-cleanup pass.
+
+Later guarded actions repair a missing or replaced branch-row owner while the primary still owns the session lock, without repeating lease cleanup or clearing a healthy row grant.
+Pstack helper processes with nonzero `PSTACK_SUBAGENT_DEPTH` never register this extension or retire the primary's ownership.
 
 Cancellation is preserved by the generation and lock-ownership rechecks the awaits are placed around.
 A session replaced mid-delivery fails the next recheck rather than acting into the session that replaced it.

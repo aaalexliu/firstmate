@@ -6232,6 +6232,131 @@ EOF
   pass "an extension-registered provider resolves in the isolated branch runtime"
 }
 
+test_pstack_child_cannot_replace_primary_branch_owner() {
+  local repo home out status driver
+  repo="$TMP_ROOT/pstack-owner-root"
+  home="$TMP_ROOT/pstack-owner-home"
+  driver="$TMP_ROOT/pstack-owner-driver.mjs"
+  mkdir -p "$home/state" "$home/config"
+  install_pi_branch_extension_fixture "$repo"
+  cat > "$driver" <<'JS'
+import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+const prelude = process.env.DRIVER_PRELUDE;
+await eval(`(async () => { ${prelude}; globalThis.__t = { fire, dispatch, defaultSessionCtx }; })()`);
+const { fire, dispatch, defaultSessionCtx } = globalThis.__t;
+const ownerFile = `${process.env.FM_HOME}/state/.branch-eligible-owner`;
+await fire("session_start", {}, defaultSessionCtx);
+if (process.env.REPRO_CHILD === "1") {
+  if (readFileSync(ownerFile, "utf8") !== process.env.EXPECTED_OWNER) {
+    throw new Error("pstack child replaced the primary's branch-row owner at startup");
+  }
+  await fire("session_shutdown", {}, defaultSessionCtx);
+  process.exit(0);
+}
+globalThis.__fmOnBranchPrompt = async ({ session }) => {
+  const tool = session.options.customTools.find((item) => item.name === "fm_branch_report");
+  const result = await tool.execute("owner-proof", {
+    task: "branch-driver", verdict: "routine", summary: "owner proof", silent: true,
+  });
+  if (result.isError) throw new Error(JSON.stringify(result));
+};
+let offer = dispatch("signal: branch-driver.status");
+if (!offer.accepted) throw new Error("primary did not accept baseline wake");
+await offer.settlement;
+const owner = readFileSync(ownerFile, "utf8");
+for (const depth of ["1", "2"]) {
+  const child = spawnSync(process.execPath, [process.argv[1]], {
+    encoding: "utf8",
+    env: { ...process.env, PSTACK_SUBAGENT_DEPTH: depth, FM_TEST_SKIP_LOCK: "1", REPRO_CHILD: "1", EXPECTED_OWNER: owner },
+  });
+  if (child.status !== 0) throw new Error(`child depth ${depth} failed: ${child.stderr}`);
+  if (!existsSync(ownerFile) || readFileSync(ownerFile, "utf8") !== owner) {
+    throw new Error("pstack child replaced or retired the primary's branch-row owner");
+  }
+  offer = dispatch("signal: branch-driver.status");
+  if (!offer.accepted) throw new Error("primary declined the wake after child exit");
+  await offer.settlement;
+}
+if (globalThis.__fmPrompts.length !== 3) throw new Error("wake did not reach primary branch after child exit");
+await fire("session_shutdown", {}, defaultSessionCtx);
+JS
+  PLUGIN="$repo/.pi/extensions/fm-branch-supervision.ts" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
+    PSTACK_SUBAGENT_DEPTH=0 DRIVER_PRELUDE="$DRIVER_PRELUDE" node "$driver" > "$TMP_ROOT/node-output" 2>&1
+  status=$?
+  out=$(cat "$TMP_ROOT/node-output")
+  expect_code 0 "$status" "a pstack helper must not replace or retire primary branch ownership: $out"
+  pass "pstack children leave the primary's branch-row owner intact through startup and shutdown"
+}
+
+test_primary_repairs_lost_branch_owner_without_repeating_activation_cleanup() {
+  local repo home out status
+  repo="$TMP_ROOT/repair-owner-root"
+  home="$TMP_ROOT/repair-owner-home"
+  mkdir -p "$home/state" "$home/config"
+  install_pi_branch_extension_fixture "$repo"
+  PLUGIN="$repo/.pi/extensions/fm-branch-supervision.ts" FM_HOME="$home" FM_ROOT_OVERRIDE="$ROOT" \
+    PSTACK_SUBAGENT_DEPTH=0 DRIVER_PRELUDE="$DRIVER_PRELUDE" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'JS'
+const prelude = process.env.DRIVER_PRELUDE;
+await eval(`(async () => { ${prelude}; globalThis.__t = { fire, dispatch, defaultSessionCtx, home }; })()`);
+const { fire, dispatch, defaultSessionCtx, home } = globalThis.__t;
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+const ownerFile = `${home}/state/.branch-eligible-owner`;
+const rowsFile = `${home}/state/.branch-eligible-rows`;
+const leaseFile = `${home}/state/.lease-task-active`;
+await fire("session_start", {}, defaultSessionCtx);
+const owner = readFileSync(ownerFile, "utf8");
+writeFileSync(leaseFile, `branch\t${process.pid}\t123\n`);
+const dead = spawnSync(process.execPath, ["-e", "console.log(process.pid)"], { encoding: "utf8" });
+if (dead.status !== 0) throw new Error(`dead owner fixture failed: ${dead.stderr}`);
+const deadPid = dead.stdout.trim();
+const withPid = (pid) => owner.split("\n").map((line, index) => index === 1 ? pid : line).join("\n");
+globalThis.__fmOnBranchPrompt = async ({ session }) => {
+  if (readFileSync(ownerFile, "utf8") !== owner) throw new Error("primary did not restore its owner before the wake prompt");
+  const rows = readFileSync(rowsFile, "utf8");
+  const tool = session.options.customTools.find((item) => item.name === "fm_branch_report");
+  const result = await tool.execute("repair-proof", {
+    task: "branch-driver", verdict: "routine", summary: "repaired owner proof", silent: true,
+  });
+  if (result.isError) throw new Error(JSON.stringify(result));
+  if (readFileSync(rowsFile, "utf8") !== rows) throw new Error("healthy ownership recheck cleared an in-flight row grant");
+};
+for (const replacement of [null, withPid(deadPid), withPid(String(process.ppid)), owner.replace(/\n1\n$/, "\nold-generation\n")]) {
+  if (replacement === null) unlinkSync(ownerFile);
+  else writeFileSync(ownerFile, replacement);
+  const offer = dispatch("signal: branch-driver.status");
+  if (!offer.accepted) throw new Error("primary declined wake after losing its branch owner");
+  await offer.settlement;
+  if (!existsSync(leaseFile)) throw new Error("owner repair repeated per-generation lease cleanup");
+}
+if (globalThis.__fmPrompts.length !== 4) throw new Error("a repaired wake never reached the branch");
+// Main's next ordinary boundary also repairs the owner without needing a wake or reload.
+unlinkSync(ownerFile);
+await fire("turn_end", {}, defaultSessionCtx);
+if (readFileSync(ownerFile, "utf8") !== owner) throw new Error("main turn boundary did not repair missing owner");
+// A primary that has lost the session lock must not reclaim row ownership.
+for (const lock of [null, "1\n"]) {
+  unlinkSync(ownerFile);
+  if (lock === null) unlinkSync(`${home}/state/.lock`);
+  else writeFileSync(`${home}/state/.lock`, lock);
+  await fire("turn_end", {}, defaultSessionCtx);
+  if (existsSync(ownerFile)) throw new Error("primary reclaimed branch owner without its session lock");
+  if (dispatch("signal: no lock").accepted) throw new Error("primary accepted wake without its session lock");
+  writeFileSync(`${home}/state/.lock`, `${process.pid}\n`);
+  await fire("turn_end", {}, defaultSessionCtx);
+  if (readFileSync(ownerFile, "utf8") !== owner) throw new Error("primary did not recover after session lock returned");
+}
+await fire("session_shutdown", {}, defaultSessionCtx);
+JS
+  status=$?
+  out=$(cat "$TMP_ROOT/node-output")
+  expect_code 0 "$status" "primary must repair missing, dead, foreign, or stale branch ownership only while owning the session lock: $out"
+  pass "primary repairs lost ownership without reload, lease cleanup, or clearing a healthy row grant"
+}
+
+test_pstack_child_cannot_replace_primary_branch_owner
+test_primary_repairs_lost_branch_owner_without_repeating_activation_cleanup
 test_outcomes_tool_call_headers_follow_the_loaded_pi_version
 test_outcomes_tool_uses_stock_execution_and_export_consumers
 test_real_pi_picker_primitives_stay_bounded_and_searchable
