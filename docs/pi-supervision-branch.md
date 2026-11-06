@@ -653,6 +653,7 @@ The generated prompt includes the [scout-completion](../.agents/skills/scout-com
 - Routine outcomes staying turn-free, task-level no-change notes staying hidden, absent-marker re-presentation, and malformed-age reporting without acknowledgement.
 - Idle and busy main state, and incident-shaped compaction and unrelated-assistant context.
 - Cold-start post-lock recovery, crash-before-cursor reload recovery, and repeated-reload idempotency.
+- Pstack helper startup and shutdown isolation in `test_pstack_child_cannot_replace_primary_branch_owner`, and lock-gated row-owner repair with active leases and healthy grants preserved in `test_primary_repairs_lost_branch_owner_without_repeating_activation_cleanup`.
 - Mirroring.
 - Post-construction provider-error and no-report fallback, the consecutive-error latch, cooldown probe, exponential backoff, report-plus-settlement recovery, and report-before-error re-latch.
 - Cache key, and model and effort selection.
