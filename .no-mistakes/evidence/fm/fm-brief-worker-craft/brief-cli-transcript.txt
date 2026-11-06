@@ -1,0 +1,80 @@
+$ FM_HOME=<disposable-worktree-home> bash bin/fm-brief.sh craft-live-no-mistakes alpha --mode no-mistakes
+exit=0
+scaffolded: <disposable-worktree-home>/data/craft-live-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+
+
+Observed craft delivered before Rules (1504 characters):
+Before editing, write the goal and the smallest change that meets it in one or two sentences in your first working status or notes.
+For a feature, name the data shape or domain model before writing code; prefer making illegal states unrepresentable over defensive checks.
+Build only what the ask needs: no new layer, abstraction, flag, framework, compatibility shim or speculative option the task does not require.
+Keep one concern per change and work in verifiable steps.
+If a second concern appears (a prerequisite refactor, an underlying bug or an unrelated improvement), do not fold it in unless the current change cannot work without it.
+Otherwise, append a scope question as `needs-decision [at=<epoch>] [key=scope-<slug>]: {question}` and stop for firstmate; keep later concerns in separate shippable changes.
+For a bug, reproduce it first on the surface the user sees, then narrow the cause.
+Revert changes motivated by a guess once evidence refutes it.
+Test behavior, not implementation details, and prove it on the real surface.
+Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: report it in the PR body's Known gaps section (hand gaps to the pipeline if it owns the PR), or in the done status for local-only.
+Before the done status, read your full diff once for needless layers, dead code, narrative comments, suppressions and workarounds, and remove them.
+Answer questions by running or reading something when you can, instead of asking.
+
+RESULT: no-mistakes passed
+
+$ FM_HOME=<disposable-worktree-home> bash bin/fm-brief.sh craft-live-direct-pr alpha --mode direct-PR
+exit=0
+scaffolded: <disposable-worktree-home>/data/craft-live-direct-pr/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+
+
+Observed craft delivered before Rules (1504 characters):
+Before editing, write the goal and the smallest change that meets it in one or two sentences in your first working status or notes.
+For a feature, name the data shape or domain model before writing code; prefer making illegal states unrepresentable over defensive checks.
+Build only what the ask needs: no new layer, abstraction, flag, framework, compatibility shim or speculative option the task does not require.
+Keep one concern per change and work in verifiable steps.
+If a second concern appears (a prerequisite refactor, an underlying bug or an unrelated improvement), do not fold it in unless the current change cannot work without it.
+Otherwise, append a scope question as `needs-decision [at=<epoch>] [key=scope-<slug>]: {question}` and stop for firstmate; keep later concerns in separate shippable changes.
+For a bug, reproduce it first on the surface the user sees, then narrow the cause.
+Revert changes motivated by a guess once evidence refutes it.
+Test behavior, not implementation details, and prove it on the real surface.
+Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: report it in the PR body's Known gaps section (hand gaps to the pipeline if it owns the PR), or in the done status for local-only.
+Before the done status, read your full diff once for needless layers, dead code, narrative comments, suppressions and workarounds, and remove them.
+Answer questions by running or reading something when you can, instead of asking.
+
+RESULT: direct-PR passed
+
+$ FM_HOME=<disposable-worktree-home> bash bin/fm-brief.sh craft-live-local-only alpha --mode local-only
+exit=0
+scaffolded: <disposable-worktree-home>/data/craft-live-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+
+
+Observed craft delivered before Rules (1504 characters):
+Before editing, write the goal and the smallest change that meets it in one or two sentences in your first working status or notes.
+For a feature, name the data shape or domain model before writing code; prefer making illegal states unrepresentable over defensive checks.
+Build only what the ask needs: no new layer, abstraction, flag, framework, compatibility shim or speculative option the task does not require.
+Keep one concern per change and work in verifiable steps.
+If a second concern appears (a prerequisite refactor, an underlying bug or an unrelated improvement), do not fold it in unless the current change cannot work without it.
+Otherwise, append a scope question as `needs-decision [at=<epoch>] [key=scope-<slug>]: {question}` and stop for firstmate; keep later concerns in separate shippable changes.
+For a bug, reproduce it first on the surface the user sees, then narrow the cause.
+Revert changes motivated by a guess once evidence refutes it.
+Test behavior, not implementation details, and prove it on the real surface.
+Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: report it in the PR body's Known gaps section (hand gaps to the pipeline if it owns the PR), or in the done status for local-only.
+Before the done status, read your full diff once for needless layers, dead code, narrative comments, suppressions and workarounds, and remove them.
+Answer questions by running or reading something when you can, instead of asking.
+
+RESULT: local-only passed
+
+$ FM_HOME=<disposable-worktree-home> bash bin/fm-brief.sh craft-live-scout alpha --scout
+exit=0
+scaffolded: <disposable-worktree-home>/data/craft-live-scout/brief.md (scout; replace {TASK} and {FIRSTMATE_SPEC})
+
+
+Observed: role-specific instructions generated without ship craft section.
+RESULT: scout passed
+
+$ FM_HOME=<disposable-worktree-home> bash bin/fm-brief.sh craft-live-charter --secondmate alpha
+exit=0
+scaffolded: <disposable-worktree-home>/data/craft-live-charter/brief.md (secondmate charter)
+
+
+Observed: role-specific instructions generated without ship craft section.
+RESULT: charter passed
+
+Disposable home removed; no worker or server was started.
