@@ -601,6 +601,11 @@ function collectMainDialog(sessionManager: ReadonlyEntries, collection: MirrorCo
 }
 
 export default function (pi: ExtensionAPI) {
+  // A pstack helper inherits the home and the primary's process ancestry,
+  // but must not replace or retire the primary's branch-row ownership.
+  const subagentDepth = process.env.PSTACK_SUBAGENT_DEPTH;
+  if (subagentDepth && subagentDepth !== "0") return;
+
   type BranchSession = {
     session: AgentSession;
     sessionManager: SessionManager;
@@ -629,7 +634,7 @@ export default function (pi: ExtensionAPI) {
   // prior generation cannot act into the new one.
   let generation = 0;
   // One-time per-generation activation work (marker write + stray branch
-  // lease cleanup); ownership itself is re-read lazily at every boundary.
+  // lease cleanup); lock and row ownership are re-read at every boundary.
   let activatedGeneration = -1;
   // Serializes branch work: mirror appends and wake turns run strictly in
   // dispatch order, one at a time (the branch runs drain -> handle -> ack
@@ -953,15 +958,32 @@ export default function (pi: ExtensionAPI) {
     return result.status === 0;
   }
 
+  // The grant script owns full record validation, including process identity.
+  // This read detects lost registration without reactivating a healthy owner:
+  // activation clears row grants, so it must not run at every action boundary.
+  function rowOwnerIsCurrent(expectedGeneration: number): boolean {
+    try {
+      const [version, pid, identity, ownerGeneration, end] =
+        readFileSync(join(state, ".branch-eligible-owner"), "utf8").split("\n");
+      return version === "fm-branch-eligible-owner-v1" && pid === String(process.pid) &&
+        Boolean(identity) && ownerGeneration === String(expectedGeneration) && end === "";
+    } catch {
+      return false;
+    }
+  }
+
   // Lazy, per-action ownership evaluation (see the header). Returns true only
   // when this session owns the fleet lock right now; the first true evaluation
   // of a generation also writes the diagnostic marker and clears stray branch
-  // leases from a prior generation.
+  // leases from a prior generation. A lost row owner is repaired independently
+  // so recovery within a generation never releases its active task leases.
   async function actingAsOwner(expectedGeneration = generation): Promise<boolean> {
     if (!(await generationOwnsLock(expectedGeneration))) return false;
     if (activatedGeneration !== expectedGeneration) {
       if (!(await releaseBranchLeases(expectedGeneration))) return false;
       if (!(await generationOwnsLock(expectedGeneration))) return false;
+    }
+    if (activatedGeneration !== expectedGeneration || !rowOwnerIsCurrent(expectedGeneration)) {
       if (!(await activateEligibleRowsOwner(state, wakeGrantScript, process.pid, String(expectedGeneration)))) {
         return false;
       }
@@ -969,6 +991,8 @@ export default function (pi: ExtensionAPI) {
         await deactivateEligibleRowsOwner(state, wakeGrantScript, process.pid, String(expectedGeneration));
         return false;
       }
+    }
+    if (activatedGeneration !== expectedGeneration) {
       markLoaded();
       activatedGeneration = expectedGeneration;
     }

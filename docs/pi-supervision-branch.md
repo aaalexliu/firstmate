@@ -307,7 +307,10 @@ That queue is what preserves these guarantees:
 - The durable append happens before anything visible.
 - Deliveries run one at a time, in sequence order.
 - The read cursor advances before the next reader sees a row.
-- Each generation gets one ownership activation.
+- Each generation gets one lease-cleanup pass.
+
+Later guarded actions repair a missing or replaced branch-row owner while the primary still owns the session lock, without repeating lease cleanup or clearing a healthy row grant.
+Pstack helper processes with nonzero `PSTACK_SUBAGENT_DEPTH` never register this extension or retire the primary's ownership.
 
 Cancellation is preserved by the generation and lock-ownership rechecks the awaits are placed around.
 A session replaced mid-delivery fails the next recheck rather than acting into the session that replaced it.
@@ -650,6 +653,7 @@ The generated prompt includes the [scout-completion](../.agents/skills/scout-com
 - Routine outcomes staying turn-free, task-level no-change notes staying hidden, absent-marker re-presentation, and malformed-age reporting without acknowledgement.
 - Idle and busy main state, and incident-shaped compaction and unrelated-assistant context.
 - Cold-start post-lock recovery, crash-before-cursor reload recovery, and repeated-reload idempotency.
+- Pstack helper startup and shutdown isolation in `test_pstack_child_cannot_replace_primary_branch_owner`, and lock-gated row-owner repair with active leases and healthy grants preserved in `test_primary_repairs_lost_branch_owner_without_repeating_activation_cleanup`.
 - Mirroring.
 - Post-construction provider-error and no-report fallback, the consecutive-error latch, cooldown probe, exponential backoff, report-plus-settlement recovery, and report-before-error re-latch.
 - Cache key, and model and effort selection.
