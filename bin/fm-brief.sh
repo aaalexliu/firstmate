@@ -2,7 +2,8 @@
 # Scaffold a crewmate brief or persistent secondmate charter at
 # data/<task-id>/brief.md under the active firstmate home.
 # For ordinary tasks, the standard Setup/Rules/Definition-of-done contract is
-# filled in. Ship and scout `# Task` sections have two subsections Firstmate
+# filled in. Ships also receive Working craft guidance before Rules.
+# Ship and scout `# Task` sections have two subsections Firstmate
 # fills before dispatch: `{TASK}` under `## Captain's intent` (the captain's
 # own ask plus the context needed to read it, including the substance of any
 # report, decision, or PR the ask refers to, without added speaker labels or
@@ -798,6 +799,20 @@ The path check is authoritative: \`git rev-parse --git-dir\` and \`git rev-parse
 If the top-level path is the primary checkout or not the worktree you were launched in, STOP - do not branch or commit here - append \`blocked [at=<epoch>]: launched in primary checkout, not an isolated worktree\` to the status file and stop.
 
 1. First action: create your branch: \`git checkout -b $BRANCH_Q --\`$SETUP2
+
+# Working craft
+Before editing, write the goal and the smallest change that meets it in one or two sentences in your first working status or notes.
+For a feature, name the data shape or domain model before writing code; prefer making illegal states unrepresentable over defensive checks.
+Build only what the ask needs: no new layer, abstraction, flag, framework, compatibility shim or speculative option the task does not require.
+Keep one concern per change and work in verifiable steps.
+If a second concern appears (a prerequisite refactor, an underlying bug or an unrelated improvement), do not fold it in unless the current change cannot work without it.
+Otherwise, record it in one line and report it to firstmate as a scope question; keep later concerns in separate shippable changes.
+For a bug, reproduce it first on the surface the user sees, then narrow the cause.
+Revert changes motivated by a guess once evidence refutes it.
+Test behavior, not implementation details, and prove it on the real surface.
+Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: say so in Known gaps rather than reporting a pass.
+Before the done status, read your full diff once for needless layers, dead code, narrative comments, suppressions and workarounds, and remove them.
+Answer questions by running or reading something when you can, instead of asking.
 
 # Rules
 $RULE1
