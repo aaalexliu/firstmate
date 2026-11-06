@@ -225,13 +225,16 @@ test_ship_modes_generate_clean_briefs() {
     assert_contains "$craft" 'no new layer, abstraction, flag, framework, compatibility shim or speculative option' "$id: missing scope restraint"
     assert_contains "$craft" 'one concern per change' "$id: missing single-concern guidance"
     assert_contains "$craft" 'unless the current change cannot work without it' "$id: missing prerequisite exception"
-    assert_contains "$craft" 'record it in one line and report it to firstmate as a scope question' "$id: missing scope escalation"
+    assert_contains "$craft" 'needs-decision [at=<epoch>] [key=scope-<slug>]: {question}' "$id: missing keyed scope escalation"
+    assert_contains "$craft" 'and stop for firstmate' "$id: missing scope decision wait"
     assert_contains "$craft" 'separate shippable changes' "$id: missing follow-up separation"
     assert_contains "$craft" 'reproduce it first on the surface the user sees' "$id: missing bug reproduction guidance"
     assert_contains "$craft" 'Revert changes motivated by a guess once evidence refutes it' "$id: missing refuted-guess cleanup"
     assert_contains "$craft" 'Test behavior, not implementation details' "$id: missing behavior-test guidance"
     assert_contains "$craft" 'stand-in, mock or wrong surface, or an inconclusive result' "$id: missing proof limitations"
-    assert_contains "$craft" 'Known gaps rather than reporting a pass' "$id: missing honest gap reporting"
+    assert_contains "$craft" "PR body's Known gaps section" "$id: missing PR gap destination"
+    assert_contains "$craft" 'hand gaps to the pipeline if it owns the PR' "$id: missing pipeline gap handoff"
+    assert_contains "$craft" 'in the done status for local-only' "$id: missing local-only gap destination"
     assert_contains "$craft" 'read your full diff once' "$id: missing self-review guidance"
     assert_contains "$craft" 'needless layers, dead code, narrative comments, suppressions and workarounds, and remove them' "$id: missing diff cleanup guidance"
     assert_contains "$craft" 'running or reading something when you can, instead of asking' "$id: missing evidence-first question guidance"
@@ -1276,7 +1279,7 @@ test_scout_and_secondmate_scaffold() {
   assert_grep "## Captain's intent" "$brief" "scout brief missing Captain's intent subsection"
   assert_grep "## Firstmate spec" "$brief" "scout brief missing Firstmate spec subsection"
   assert_grep "{FIRSTMATE_SPEC}" "$brief" "scout brief missing the spec placeholder"
-  assert_no_grep '^# Working craft$' "$brief" "scout brief must not include ship working craft"
+  assert_no_grep '# Working craft' "$brief" "scout brief must not include ship working craft"
   assert_no_grep 'write the goal and the smallest change' "$brief" "scout brief must not leak ship working-craft text"
 
   FM_SECONDMATE_CHARTER='Supervise the alpha domain.' \
@@ -1290,7 +1293,7 @@ test_scout_and_secondmate_scaffold() {
     "secondmate charter must not grow ship/scout Task subsections"
   assert_no_grep "{FIRSTMATE_SPEC}" "$brief" \
     "secondmate charter must not carry the Firstmate spec placeholder"
-  assert_no_grep '^# Working craft$' "$brief" "secondmate charter must not include ship working craft"
+  assert_no_grep '# Working craft' "$brief" "secondmate charter must not include ship working craft"
   assert_no_grep 'write the goal and the smallest change' "$brief" "secondmate charter must not leak ship working-craft text"
   pass "fm-brief: scout and secondmate code paths still scaffold well-formed briefs"
 }

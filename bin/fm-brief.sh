@@ -806,11 +806,11 @@ For a feature, name the data shape or domain model before writing code; prefer m
 Build only what the ask needs: no new layer, abstraction, flag, framework, compatibility shim or speculative option the task does not require.
 Keep one concern per change and work in verifiable steps.
 If a second concern appears (a prerequisite refactor, an underlying bug or an unrelated improvement), do not fold it in unless the current change cannot work without it.
-Otherwise, record it in one line and report it to firstmate as a scope question; keep later concerns in separate shippable changes.
+Otherwise, append a scope question as \`needs-decision [at=<epoch>] [key=scope-<slug>]: {question}\` and stop for firstmate; keep later concerns in separate shippable changes.
 For a bug, reproduce it first on the surface the user sees, then narrow the cause.
 Revert changes motivated by a guess once evidence refutes it.
 Test behavior, not implementation details, and prove it on the real surface.
-Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: say so in Known gaps rather than reporting a pass.
+Treat a passing test against a stand-in, mock or wrong surface, or an inconclusive result, as no proof: report it in the PR body's Known gaps section (hand gaps to the pipeline if it owns the PR), or in the done status for local-only.
 Before the done status, read your full diff once for needless layers, dead code, narrative comments, suppressions and workarounds, and remove them.
 Answer questions by running or reading something when you can, instead of asking.
 
