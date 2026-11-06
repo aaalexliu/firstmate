@@ -1,0 +1,33 @@
+{"event":"primary-activated","pid":93093,"owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n"}
+{"event":"branch-received-wake","case":"baseline","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"1\n","leasePreserved":false}
+{"event":"durable-report-tool-result","case":"baseline","result":"recorded seq 1 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"baseline","reports":1}
+{"event":"helper-process","depth":"1","exit":0,"stdout":"{\"event\":\"helper-start-and-exit-preserved-owner\",\"depth\":\"1\",\"pid\":93782}\n","stderr":""}
+{"event":"branch-received-wake","case":"after-helper-depth-1","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"2\n","leasePreserved":false}
+{"event":"durable-report-tool-result","case":"after-helper-depth-1","result":"recorded seq 2 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"after-helper-depth-1","reports":2}
+{"event":"helper-process","depth":"2","exit":0,"stdout":"{\"event\":\"helper-start-and-exit-preserved-owner\",\"depth\":\"2\",\"pid\":94208}\n","stderr":""}
+{"event":"branch-received-wake","case":"after-helper-depth-2","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"3\n","leasePreserved":false}
+{"event":"durable-report-tool-result","case":"after-helper-depth-2","result":"recorded seq 3 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"after-helper-depth-2","reports":3}
+{"event":"SCENARIO_PASS","name":"helper exclusion and subsequent real branch delivery"}
+{"event":"branch-received-wake","case":"repair-missing","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"4\n","leasePreserved":true}
+{"event":"durable-report-tool-result","case":"repair-missing","result":"recorded seq 4 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"repair-missing","reports":4}
+{"event":"branch-received-wake","case":"repair-dead-owner","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"5\n","leasePreserved":true}
+{"event":"durable-report-tool-result","case":"repair-dead-owner","result":"recorded seq 5 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"repair-dead-owner","reports":5}
+{"event":"branch-received-wake","case":"repair-foreign-live-owner","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"6\n","leasePreserved":true}
+{"event":"durable-report-tool-result","case":"repair-foreign-live-owner","result":"recorded seq 6 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"repair-foreign-live-owner","reports":6}
+{"event":"branch-received-wake","case":"repair-stale-generation","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"7\n","leasePreserved":true}
+{"event":"durable-report-tool-result","case":"repair-stale-generation","result":"recorded seq 7 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"repair-stale-generation","reports":7}
+{"event":"SCENARIO_PASS","name":"missing/replaced owner recovery without reload, lease cleanup or healthy grant loss"}
+{"event":"lock-loss-refused","lock":"absent","ownerAbsent":true,"wakeAccepted":false}
+{"event":"lock-loss-refused","lock":"foreign","ownerAbsent":true,"wakeAccepted":false}
+{"event":"branch-received-wake","case":"after-lock-restored","owner":"fm-branch-eligible-owner-v1\n93093\nFri Nov  6 14:32:21 2026     node ~/.no-mistakes/evidence/01M6RK0A3TJB5GFWZ09823QG6P/owner-live-driver.mjs\n1\n","grant":"8\n","leasePreserved":true}
+{"event":"durable-report-tool-result","case":"after-lock-restored","result":"recorded seq 8 and delivered [routine] into main","grantPreserved":true}
+{"event":"wake-settled","case":"after-lock-restored","reports":8}
+{"event":"SCENARIO_PASS","name":"primary cannot reclaim without session lock and resumes when lock restored"}
+{"event":"primary-shutdown","ownerRemoved":true,"reports":8,"requests":21}
