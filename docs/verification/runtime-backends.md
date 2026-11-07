@@ -3219,28 +3219,27 @@ The merge suite and the security suite dominate the wall time.
 
 ### 2026-11-07 away standing authority and return account
 
-Verified on Darwin 25.6.0 arm64 with Node v26.12.1 and Pi package 1.5.0.
-The branch, host, and daemon regressions verify delivery of the standing-rule read instructions and decision contract, not a live model's adherence.
-No model was prompted and no provider call was made.
+Refreshed on 2026-11-07 on Darwin 25.6.0 arm64 with Node v24.18.0 and GNU Bash 5.3.9.
+This focused run verified the host's emitted wake-prompt interface and mechanical local-landing relocation, not semantic yolo decisions or a live model's adherence.
+No model was prompted and no provider call was made; installed-Pi compatibility and live Herdr launcher coverage were not exercised by this run.
 
 ```sh
-bash bin/fm-test-run.sh tests/fm-branch-supervision.test.sh
-bash bin/fm-test-run.sh tests/fm-afk-contract.test.sh tests/fm-afk-return.test.sh
-bash bin/fm-test-run.sh tests/fm-daemon.test.sh tests/fm-send-resolve-key.test.sh tests/fm-supervision-host-drain.test.sh
-FM_PI_PACKAGE_DIR=/opt/homebrew/Cellar/pi-coding-agent/1.4.0/libexec/lib/node_modules/@earendil-works/pi-coding-agent bash bin/fm-test-run.sh tests/fm-pi-branch-extension.test.sh
-bash bin/fm-test-run.sh tests/fm-pr-merge.test.sh
+mkdir -p .review-tmp
+TMPDIR="$PWD/.review-tmp" FM_TEST_SKIP_ORPHAN_REAP=1 bash bin/fm-test-run.sh tests/fm-supervision-host-drain.test.sh tests/fm-merge-local.test.sh
 ```
 
 ```text
-ok - branch prompt is byte-stable across home rules, cwd, timezone, and time, and delivers the standing-away authority contract
-ok - daemon away digests carry standing-rule reads and decision audit instructions without changing quiet mode
-ok - return lists standing-authority decisions and their rules for reversal even with no away words
-ok - /quiet off's return path keeps its existing behavior without an away decision account
+ok - dispatch entry: the host reads branch eligibility, the offer rule, and the wake prompt from the Pi branch's own owner
+FM_TEST_END 2026-11-07T04:38:52Z tests/fm-supervision-host-drain.test.sh exit=0 duration_ms=54645 gate_skip=false
+ok - yolo local landing reaches the approved head only under live away authority
+FM_TEST_END 2026-11-07T04:39:21Z tests/fm-merge-local.test.sh exit=0 duration_ms=28376 gate_skip=false
+FM_TEST_SUMMARY total=2 failed=0 skipped_gate=0 duration_ms=83350
 ```
 
-The merge and decision-answer suites exercise standing authority with no extra away words and restore the branch refusal after archive.
-The entry and return suites preserve quiet-mode behavior.
-Live Herdr launcher coverage remains unverified here: its fleet-state tripwire refused before lab preparation.
+All 17 host-drain cases and nine local-landing cases passed.
+The host prompt assertions cover data-override precedence, the unset-home fallback, and the prohibition on substituting another code root for an explicit home.
+The local-landing cases cover the approved head and checkout, branch-advance refusal, races, and role refusal outside a valid live away record, including after archive.
+The other authority, return, daemon, and installed-Pi subjects were not rerun in this focused refresh.
 
 ## Native Codex through Pi
 
