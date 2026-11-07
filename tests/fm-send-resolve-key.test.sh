@@ -880,7 +880,7 @@ test_decision_answer_partition_relocates_under_the_record() {
   grep -qF "refreshed the token; resume" "$home/state/t1.inbox/001.msg" \
     || fail "the branch's blocker answer did not reach the worker's inbox"
 
-  # Under the record: the same decision answer is sent and closes the key.
+  # Under a record with no extra words, standing decision authority relocates.
   FM_HOME="$home" "$ROOT/bin/fm-afk-contract.sh" enter >/dev/null || fail "away entry failed"
   out=$(env PATH="$fb:$PATH" FM_ROOT_OVERRIDE="$home" FM_HOME="$home" FM_SEND_LOG="$log" FM_SEND_SETTLE=0 \
     FM_SUPERVISION_ACTOR=branch "$SEND" t1 --resolve-key api-shape "go with REST" 2>&1); rc=$?
@@ -895,8 +895,22 @@ test_decision_answer_partition_relocates_under_the_record() {
     fail "the relocated answer left the decision open: $out"
   fi
 
-  # Main never meets the partition, attended or not.
+  printf 'needs-decision [key=review-stop]: review limit reached; may the approved extra round run?\n' >> "$home/state/t1.status"
+  out=$(env PATH="$fb:$PATH" FM_ROOT_OVERRIDE="$home" FM_HOME="$home" FM_SEND_LOG="$log" FM_SEND_SETTLE=0 \
+    FM_SUPERVISION_ACTOR=branch "$SEND" t1 --resolve-key review-stop "Apply the standing review rule: run the approved extra fix round." 2>&1); rc=$?
+  expect_code 0 "$rc" "a standing-rule review decision needs no extra away words: $out"
+  grep -qF 'Apply the standing review rule' "$home/state/t1.inbox/003.msg" \
+    || fail "the standing review answer did not reach the worker"
+  out=$(drain_out "$home")
+  assert_not_contains "$out" '[key=review-stop]' "the standing review answer left the key open"
+
+  # Archive restores the attended partition for the branch, but not main.
   FM_HOME="$home" "$ROOT/bin/fm-afk-contract.sh" archive >/dev/null || fail "away archive failed"
+  printf 'needs-decision [key=after-return]: new review decision\n' >> "$home/state/t1.status"
+  out=$(env PATH="$fb:$PATH" FM_ROOT_OVERRIDE="$home" FM_HOME="$home" FM_SEND_LOG="$log" FM_SEND_SETTLE=0 \
+    FM_SUPERVISION_ACTOR=branch "$SEND" t1 --resolve-key after-return "continue" 2>&1); rc=$?
+  expect_code 6 "$rc" "archived away authority must not answer a new decision: $out"
+  [ ! -e "$home/state/t1.inbox/004.msg" ] || fail "the archived authority still delivered an answer"
   printf 'needs-decision [key=db]: postgres or sqlite\n' >> "$home/state/t1.status"
   run_send "$fb" "$home" "$log" t1 --resolve-key db "postgres"; rc=$?
   expect_code 0 "$rc" "main answering a decision attended is unaffected by the partition"

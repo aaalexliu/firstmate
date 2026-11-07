@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/fm-afk-contract.test.sh - the away-posture record owner
 # (bin/fm-afk-contract.sh): the captain's away words recorded verbatim as the
-# whole mandate, the read-back rendering, the entry announcement (hold-for-
+# verbatim instruction record, the read-back rendering, the entry announcement (hold-for-
 # return only), the one-step same-turn entry with no wait for a go, the
 # retired two-step entry refusing by name, the refresh and replace rules,
 # the archive at return, the version 2 record with version 1 still readable,
@@ -125,7 +125,10 @@ test_enter_writes_a_v2_record_in_one_step_and_announces_hold_for_return() {
   [ ! -e "$home/state/.afk-contract.proposed" ] || fail "enter staged a proposal instead of writing the record"
   assert_contains "$out" 'Away posture recorded at ' 'announcement opens with the recorded time'
   assert_contains "$out" 'hold-for-return only. No phone channel is configured; anything that needs you waits for your return.' 'announcement says hold-for-return only, aloud'
-  assert_contains "$out" 'Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return.' 'announcement says the words will be carried out'
+  assert_contains "$out" 'Your away instructions are recorded verbatim; they add to or narrow your standing rules.' 'announcement preserves words without making them the whole mandate'
+  assert_contains "$out" 'The away session decides as firstmate would with you present, including green merges you already authorized' 'announcement carries standing authority'
+  assert_contains "$out" 'The return brief lists its decisions so you can reverse them.' 'announcement promises a reversible decision account'
+  assert_not_contains "$out" 'anything it is unsure of' 'announcement must not hold ordinary decisions on doubt'
   assert_contains "$out" 'Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say.' 'announcement states the never-set'
   assert_contains "$out" 'Expected return: not given. Spend cap: 4 concurrent workers.' 'announcement carries the defaults'
   assert_contains "$out" 'Away posture (recorded):' 'the read-back follows the entry'
@@ -216,7 +219,8 @@ test_plain_entry_and_refresh_leave_no_wait() {
   home=$(make_home defaults)
   out=$(contract "$home" enter 2>&1) || fail "plain entry failed: $out"
   [ -f "$home/state/.afk-contract" ] || fail "plain entry did not write the record"
-  assert_contains "$out" 'No away instructions were recorded; the away session acts on standing authority only, and anything that needs you waits for your return.' 'plain announcement'
+  assert_contains "$out" 'No away instructions were recorded; the away session decides under your standing rules as firstmate would with you present, including green merges you already authorized.' 'plain announcement'
+  assert_contains "$out" 'Only calls that need you wait for your return.' 'plain entry holds only true captain calls'
   assert_contains "$out" 'hold-for-return only.' 'plain announcement says hold-for-return'
   assert_contains "$out" '  your words: (none)' 'a plain entry reads back no words'
   first=$(cat "$home/state/.afk-contract")
@@ -438,7 +442,7 @@ test_retired_clause_and_grant_inputs_are_usage_errors_by_name() {
     set -e
     [ "$rc" -eq 2 ] || fail "$flag should be a usage error (rc=$rc): $out"
     assert_contains "$out" "$flag was retired" "$flag refusal did not name the retirement"
-    assert_contains "$out" "away words are the whole mandate" "$flag refusal did not point at the words"
+    assert_contains "$out" "record stores the captain's away words" "$flag refusal did not point at the words"
     [ ! -f "$home/state/.afk-contract" ] || fail "$flag wrote a record despite the refusal"
   done
   set +e

@@ -368,7 +368,7 @@ A new one opens in two cases:
 - Every `FM_SUPERVISION_HOST_ROTATE_TURNS` turns, because each wake adds history and the per-wake cost grows with it.
 
 Nothing captain-facing rides on that conversation, because the outcome store carries every result.
-The captain context it acts on is the [dialog mirror](#the-dialog-mirror) at the head of every attended wake and the away record's read-back at the tail of every away wake.
+Attended captain context comes from the [dialog mirror](#the-dialog-mirror) at the head of every wake; away context follows [`bin/fm-branch-prompt.sh` "Postures"](../bin/fm-branch-prompt.sh), including the standing-rule inputs directed by the wake tail rather than the record's words alone.
 
 ### Where engine cost is read
 

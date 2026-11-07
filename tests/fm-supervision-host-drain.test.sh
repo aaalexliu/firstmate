@@ -157,6 +157,18 @@ test_dispatch_entry_scopes_rows_and_renders_the_away_tail() {
   assert_contains "$out" "finish with the bin/fm-branch-report.sh command." "the wake prompt must name the host's report surface"
   assert_contains "$out" "POSTURE: AWAY." "an away wake prompt must carry the posture tail"
   assert_contains "$out" "    merge nothing" "the away tail must carry the record's read-back verbatim"
+  assert_contains "$out" "MAIN's full standing authority relocates to you" "the host still uses words-only authority"
+  assert_contains "$out" 'AGENTS.md' "the host lacks the tracked standing rules"
+  assert_contains "$out" 'data/captain.md, data/captain-shared.md, and data/learnings.md' "the host lacks home standing-rule read instructions"
+  assert_contains "$out" 'FM_DATA_OVERRIDE, otherwise FM_HOME/data' "the host lacks the home data override order"
+  assert_contains "$out" "otherwise the tracked code root's data/ when FM_HOME is unset" "the host lacks the default-home data fallback"
+  assert_contains "$out" 'never substitute another code root for an explicit home' "the host may read the wrong home's rules"
+  assert_contains "$out" 'For a decision-bearing wake (needs-decision, ask-user, review-stop, blocked, or a merge or landing call), reread AGENTS.md' "the host lacks decision-scoped standing-rule reads"
+  assert_contains "$out" 'Heartbeats, routine progress, and still-busy updates alone do not require rereads.' "the host still requires routine-wake rereads"
+  assert_contains "$out" "task's recorded effective yolo=on authority" "the host lacks task-local landing authority"
+  assert_contains "$out" 'never a project default overriding task yolo=off' "the host may override a task's merge restriction"
+  assert_contains "$out" 'per your standing authority:' "the host lacks the standing decision audit"
+  assert_not_contains "$out" 'hold on doubt' "the host still holds ordinary choices"
   pass "dispatch entry: the host reads branch eligibility, the offer rule, and the wake prompt from the Pi branch's own owner"
 }
 

@@ -17,10 +17,10 @@
 # status logs. Its order is fixed: supervisor health across the away window
 # first, then the captain's away instructions - their words verbatim, including
 # superseded in-session mandates - followed by the away session's account of
-# every visible action it took under them (each non-silent outcome-store row
-# from the window whose summary opens with the "per your away instructions:"
-# marker the branch prompt in bin/fm-branch-prompt.sh requires), then what is
-# waiting on the captain,
+# every visible action it took under them, then decisions under standing
+# authority for reversal (non-silent outcome-store rows from the window whose
+# summaries open with the markers bin/fm-branch-prompt.sh requires), then what
+# is waiting on the captain,
 # then what was tried and failed or could not be fixed (a supervision-host
 # latch or engine errors inside the window lead it), then landed work whose
 # task record is still live (the recorded PR carries the
@@ -474,10 +474,10 @@ strip_axi_help() {
   awk '/^help\[/ { skip = 1; next } skip && /^  / { next } { skip = 0; print }'
 }
 
-# The branch prompt (bin/fm-branch-prompt.sh "Postures") requires every action
-# taken under the captain's words to open its outcome summary with this marker
-# exactly; the brief's account includes visible rows from the window that carry it.
+# bin/fm-branch-prompt.sh "Postures" owns the summary markers; include only
+# visible rows from this window, preserving each decision's rule and result.
 AWAY_ACTION_MARKER='per your away instructions:'
+STANDING_ACTION_MARKER='per your standing authority:'
 
 MANDATE_COUNT=0
 HELD_READ_FAILED=0
@@ -581,6 +581,17 @@ render_return_brief() {  # <evidence-file> <blockers-file> <since-epoch> <drain-
     render_words_account
   else
     printf '  (no away-posture record for this window; legacy away flag only)\n'
+  fi
+
+  if [ -n "$record" ] && [ "$("$CONTRACT" mode --path "$record" 2>/dev/null)" = away ]; then
+    printf 'Decisions under your standing authority (you can reverse these):\n'
+    rows=$(printf '%s\n' "$STORE_ROWS" | awk -F '\t' -v marker="$STANDING_ACTION_MARKER" '
+      $6 != "true" && substr($5, 1, length(marker)) == marker { printf "  - %s: %s\n", $2, $5 }')
+    if [ -n "$rows" ]; then
+      printf '%s\n' "$rows"
+    else
+      printf '  (none)\n'
+    fi
   fi
 
   # 3. waiting on the captain.
