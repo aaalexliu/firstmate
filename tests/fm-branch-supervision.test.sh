@@ -20,7 +20,10 @@ test_branch_prompt_is_byte_stable_and_above_cache_floor() {
   local home_a home_b out_a out_b out_c size
   home_a="$TMP_ROOT/prompt-home-a"
   home_b="$TMP_ROOT/prompt-home-b"
-  mkdir -p "$home_a/state" "$home_b/state"
+  mkdir -p "$home_a/state" "$home_b/state" "$home_a/data" "$home_b/data"
+  printf 'Standing review rule: permit the approved extra round.\n' > "$home_a/data/captain.md"
+  printf 'Shared preferences from a different home.\n' > "$home_b/data/captain-shared.md"
+  printf 'A private operational lesson.\n' > "$home_b/data/learnings.md"
   # Give the two homes deliberately different fleet state and clock context:
   # a byte-stable prompt must not absorb any of it.
   printf 'signal: task-1 done\n' > "$home_a/state/task-1.status"
@@ -69,7 +72,21 @@ test_branch_prompt_is_byte_stable_and_above_cache_floor() {
     *"A second mate's status log is a relay channel for its child work"*"retiring a second mate is MAIN's alone"*"Report a second mate's signal wake from the status lines that wake newly presents"*"A second mate's stale wake is a liveness event: report it even when it presents no new status lines."*) ;;
     *) fail "branch prompt lost the second-mate relay, signal-span, or stale-liveness rule" ;;
   esac
-  pass "branch prompt is byte-stable across homes, cwd, timezone, and time, above the cache floor"
+  assert_not_contains "$out_a" 'Standing review rule: permit the approved extra round.' "private preferences entered the prefix"
+  assert_not_contains "$out_b" 'A private operational lesson.' "home learnings entered the prefix"
+  assert_contains "$out_a" "MAIN's full standing authority relocates to you" "away authority must not depend on extra words"
+  assert_contains "$out_a" "Hold only what MAIN would bring to the captain even when present" "away decisions still hold on mere doubt"
+  assert_contains "$out_a" "scope calls inside accepted plans as MAIN would under the standing rules" "standing scope and review decisions did not relocate"
+  assert_contains "$out_a" "under the task's recorded yolo authority" "PR merge authority must come from the task"
+  assert_contains "$out_a" 'land green, in-scope local-only work under the task' "local landing lost its task authority source"
+  assert_contains "$out_a" "recorded effective yolo=on authority" "local landing lacks effective task authority"
+  assert_contains "$out_a" "A task's recorded yolo=off is not overridden by the project's default." "project defaults may override task authority"
+  assert_contains "$out_a" 'before deciding on needs-decision, ask-user, review-stop, blocked, or a merge or landing call' "standing-rule rereads lack decision scope"
+  assert_contains "$out_a" 'Heartbeats, routine progress, and still-busy updates alone do not require rereads.' "routine wakes still require standing-rule rereads"
+  assert_contains "$out_a" 'per your standing authority:' "standing decisions have no return-audit marker"
+  assert_contains "$out_a" 'naming the rule relied on' "decision audit omits the standing rule"
+  assert_not_contains "$out_a" 'Never by analogy: act only where the words plainly name' "old words-only rule survived"
+  pass "branch prompt is byte-stable across home rules, cwd, timezone, and time, and delivers the standing-away authority contract"
 }
 
 test_branch_prompt_routes_completed_scouts_through_guarded_cleanup() {
@@ -1333,12 +1350,6 @@ test_branch_cannot_force_teardown_or_directly_relaunch() {
 
 # --- away posture: main parked, standing authority relocated -----------------
 
-# The relocation is exactly bin/fm-lease-lib.sh's role-partition paragraph:
-# the branch passes the main-only partition for the PR merge and a fresh spawn
-# ONLY while a confirmed, live away-posture record exists; local-only landing
-# is never relocated; the record's spend cap binds a fresh ordinary spawn for
-# either actor; and an unconfirmed, archived, or invalid record is absence,
-# restoring the attended refusal byte for byte.
 test_away_record_relocates_main_owned_actions_to_the_branch() {
   local home root out status refusal
   home="$TMP_ROOT/away-home"
@@ -1366,11 +1377,10 @@ test_away_record_relocates_main_owned_actions_to_the_branch() {
   assert_contains "$out" "main is parked" "the relocation did not announce itself"
   assert_contains "$out" "task metadata is unavailable" "the merge did not reach its own gate under the record"
 
-  # Local-only landing is never relocated: it has no record-side gate.
   out=$(FM_HOME="$home" FM_SUPERVISION_ACTOR=branch "$ROOT/bin/fm-merge-local.sh" task-x 2>&1)
   status=$?
-  [ "$status" -eq 6 ] || fail "branch fm-merge-local was relocated under the record (exit $status): $out"
-  assert_contains "$out" "local-only landing (fm-merge-local) refused" "merge-local refusal lost its wording under the record"
+  [ "$status" -ne 6 ] || fail "branch fm-merge-local still hit the partition under the record: $out"
+  assert_contains "$out" "no meta for task" "local merge did not reach its task gate under the record"
 
   # A fresh spawn passes the partition and meets the spend cap: one ordinary
   # task record against a cap of 2, then a second ordinary record refuses.
@@ -1451,7 +1461,7 @@ WRAPPER
   [ "$status" -eq 6 ] || fail "quiet mode's record relocated the merge to the branch (exit $status): $out"
   assert_contains "$out" "$refusal" "the attended refusal changed under quiet mode's record"
   assert_not_contains "$out" "main is parked" "quiet mode's record announced a relocation"
-  pass "the away-posture record relocates the PR merge and a spawn under the spend cap to the branch, never local landing, and only while confirmed, valid, and away"
+  pass "the away-posture record relocates guarded merges and a spawn under the spend cap only while confirmed, valid, and away"
 }
 
 test_away_branch_spawn_requires_queued_dispatchable_work() {

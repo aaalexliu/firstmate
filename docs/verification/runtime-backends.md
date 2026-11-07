@@ -3217,6 +3217,30 @@ ok - under the away-posture record the wake carries the verbatim read-back tail,
 
 The merge suite and the security suite dominate the wall time.
 
+### 2026-11-07 away standing authority and return account
+
+Refreshed on 2026-11-07 on Darwin 25.6.0 arm64 with Node v24.18.0 and GNU Bash 5.3.9.
+This focused run verified the host's emitted wake-prompt interface and mechanical local-landing relocation, not semantic yolo decisions or a live model's adherence.
+No model was prompted and no provider call was made; installed-Pi compatibility and live Herdr launcher coverage were not exercised by this run.
+
+```sh
+mkdir -p .review-tmp
+TMPDIR="$PWD/.review-tmp" FM_TEST_SKIP_ORPHAN_REAP=1 bash bin/fm-test-run.sh tests/fm-supervision-host-drain.test.sh tests/fm-merge-local.test.sh
+```
+
+```text
+ok - dispatch entry: the host reads branch eligibility, the offer rule, and the wake prompt from the Pi branch's own owner
+FM_TEST_END 2026-11-07T04:38:52Z tests/fm-supervision-host-drain.test.sh exit=0 duration_ms=54645 gate_skip=false
+ok - yolo local landing reaches the approved head only under live away authority
+FM_TEST_END 2026-11-07T04:39:21Z tests/fm-merge-local.test.sh exit=0 duration_ms=28376 gate_skip=false
+FM_TEST_SUMMARY total=2 failed=0 skipped_gate=0 duration_ms=83350
+```
+
+All 17 host-drain cases and nine local-landing cases passed.
+The host prompt assertions cover data-override precedence, the unset-home fallback, and the prohibition on substituting another code root for an explicit home.
+The local-landing cases cover the approved head and checkout, branch-advance refusal, races, and role refusal outside a valid live away record, including after archive.
+The other authority, return, daemon, and installed-Pi subjects were not rerun in this focused refresh.
+
 ## Native Codex through Pi
 
 Verified on 2026-09-08 with Pi 0.85.1 and the installed `pi-codex-native` 0.2.1 adapter.

@@ -1726,6 +1726,43 @@ test_escalate_batches_into_one_digest() {
   pass "multiple escalations flush as a single batched digest"
 }
 
+test_away_digest_carries_standing_authority_but_quiet_is_unchanged() {
+  local mode dir state sent capture digest home data_override expected_data
+  for mode in away away-override away-default quiet; do
+    dir=$(make_supercase "standing-authority-$mode")
+    home="$dir"
+    data_override=
+    case "$mode" in
+      away-override) data_override="$dir/private-data" ;;
+      away-default) home="$ROOT" ;;
+    esac
+    expected_data=${data_override:-$home/data}
+    state="$dir/state"
+    sent="$dir/sent.log"; : > "$sent"
+    capture="$dir/pane.txt"; printf '\342\235\257 \n' > "$capture"
+    FM_STATE_OVERRIDE="$state" FM_AFK_MODE="${mode%%-*}" "$ROOT/bin/fm-afk-contract.sh" enter >/dev/null \
+      || fail "could not enter $mode posture"
+    escalate_add "$state" 'review-stop needs an answer'
+    afk_enter "$state"
+    PATH="$dir/fakebin:$PATH" FM_FAKE_TMUX_PANE_ALIVE=1 FM_FAKE_TMUX_SENT="$sent" \
+      FM_FAKE_TMUX_CAPTURE="$capture" FM_ESCALATE_BATCH_SECS=0 FM_HOME="$home" \
+      FM_DATA_OVERRIDE="$data_override" escalate_flush "$state" \
+      || fail "could not deliver $mode digest"
+    digest=$(delivered_digest "$sent")
+    if [ "$mode" != quiet ]; then
+      assert_contains "$digest" 'decide as main would attended under standing rules' "daemon retains words-only authority"
+      assert_contains "$digest" 'data/captain.md, data/captain-shared.md, and data/learnings.md' "daemon lacks home rule inputs"
+      assert_contains "$digest" "resolved home data directory '$expected_data'" "daemon did not deliver the resolved home data path"
+      assert_contains "$digest" 'For a decision-bearing wake (needs-decision, ask-user, review-stop, blocked, or a merge or landing call), reread the current record' "daemon lacks decision-scoped standing-rule reads"
+      assert_contains "$digest" 'Heartbeats, routine progress, and still-busy updates alone do not require rereads.' "daemon still requires routine-wake rereads"
+      assert_contains "$digest" 'Record standing-authority decisions and their rules' "daemon decisions lack a return audit"
+    else
+      assert_not_contains "$digest" 'Away decision procedure:' "away relocation changed quiet-mode instructions"
+    fi
+  done
+  pass "daemon away digests carry standing-rule reads and decision audit instructions without changing quiet mode"
+}
+
 test_escalate_marker_preserving_primary_types_envelope() {
   local dir state fakebin sent capture
   dir=$(make_supercase batch-typed-envelope)
@@ -3490,6 +3527,7 @@ test_housekeeping_herdr_idle_busy_record_clears_stale
 test_housekeeping_herdr_resumed_stale_cleared
 test_housekeeping_orca_persistent_stale_resolves_terminal
 test_escalate_batches_into_one_digest
+test_away_digest_carries_standing_authority_but_quiet_is_unchanged
 test_escalate_batch_age_uses_first_append
 test_heartbeat_scan_dedup
 test_handle_wake_routes_self_and_escalate

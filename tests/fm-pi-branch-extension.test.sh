@@ -2239,7 +2239,10 @@ const head = "FIRSTMATE SUPERVISION WAKE: signal: away wake\n\nHandle this per y
 if (!awayPrompt.startsWith(head)) throw new Error(`the away wake lost its shape or its tail: ${awayPrompt}`);
 const readback = contract(["readback"]);
 if (!readback.endsWith("    merge task-d when green, then cut the prerelease\n    \n")) throw new Error(`the read-back lost the captain's words or their trailing blank line: ${JSON.stringify(readback)}`);
-if (!awayPrompt.includes("act on them by your own judgment")) throw new Error(`the away tail lost the words-execution rule: ${awayPrompt}`);
+for (const rule of ["MAIN's full standing authority relocates to you", "decide as MAIN would attended", "hold only true captain calls", "AGENTS.md", "data/captain.md", "data/captain-shared.md", "data/learnings.md", "For a decision-bearing wake (needs-decision, ask-user, review-stop, blocked, or a merge or landing call), reread AGENTS.md", "Heartbeats, routine progress, and still-busy updates alone do not require rereads.", "task's recorded effective yolo=on authority", "never a project default overriding task yolo=off", "FM_DATA_OVERRIDE, otherwise FM_HOME/data", "when FM_HOME is unset", "never substitute another code root for an explicit home", "bin/fm-merge-local.sh", "per your standing authority:", "rule relied on"]) {
+  if (!awayPrompt.includes(rule)) throw new Error(`the away tail lost ${rule}: ${awayPrompt}`);
+}
+if (awayPrompt.includes("hold on doubt")) throw new Error(`the away tail still holds ordinary decisions: ${awayPrompt}`);
 if (awayPrompt.includes("does not execute them")) throw new Error(`the away tail still calls the words inert: ${awayPrompt}`);
 if (!awayPrompt.endsWith(`The record, verbatim:\n${readback}`)) throw new Error(`the tail does not end with the record's read-back verbatim, trailing whitespace included: ${JSON.stringify(awayPrompt)}`);
 const snapshot = readFileSync(`${home}/state/.branch-eligible-rows`, "utf8").trim().split("\n").join(",");

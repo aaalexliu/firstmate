@@ -30,12 +30,11 @@
 # The read-back is printed after the record exists; it is informational, never a
 # gate, and never asks for a go.
 #
-# THE RECORD IS THE WORDS. The captain's away words are the whole mandate: they
-# are recorded verbatim, read back as plain sentences by firstmate after entry,
-# and acted on by the supervision session's own judgment at the
-# moment an event makes them relevant, through the guarded scripts and under the
-# standing authority it already has (bin/fm-branch-prompt.sh "Postures" owns the
-# execution rules). NO PARSER, TOKENIZER, CLASSIFIER, OR GRAMMAR READS THE WORDS
+# THE RECORD IS THE WORDS. It stores the captain's away words verbatim, not
+# the standing rules: bin/fm-branch-prompt.sh "Postures" owns how those words
+# add to or narrow the attended authority relocated to away supervision.
+# Firstmate reads them back as plain sentences after entry.
+# NO PARSER, TOKENIZER, CLASSIFIER, OR GRAMMAR READS THE WORDS
 # HERE, BY THE CAPTAIN'S MANDATE: this script never tokenizes, classifies, or
 # semantically validates them, records no clause fields, ids, or verbs, and keeps
 # no per-task merge-grant list. What stays mechanical is exactly what a script can
@@ -465,9 +464,9 @@ fm_afk_contract_render_announcement() {  # <path>
   words=$(fm_afk_contract_read_words "$path"; rc=$?; printf x; exit "$rc") || return 1
   words=${words%x}
   if [ -n "$words" ]; then
-    mandate_text='Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return.'
+    mandate_text='Your away instructions are recorded verbatim; they add to or narrow your standing rules. The away session decides as firstmate would with you present, including green merges you already authorized; only calls that need you wait for your return. The return brief lists its decisions so you can reverse them.'
   else
-    mandate_text='No away instructions were recorded; the away session acts on standing authority only, and anything that needs you waits for your return.'
+    mandate_text='No away instructions were recorded; the away session decides under your standing rules as firstmate would with you present, including green merges you already authorized. Only calls that need you wait for your return. The return brief lists its decisions so you can reverse them.'
   fi
   printf 'Away posture recorded at %s: hold-for-return only. %s %s Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: %s. Spend cap: %s concurrent workers.\n' \
     "$(fm_afk_contract_read_field "$path" confirmed)" \
@@ -509,7 +508,7 @@ fm_afk_contract_parse_inputs() {  # <args...>; sets WORDS, EXPECTED_RETURN, SPEN
         FM_AFK_CONTRACT_SCALARS_GIVEN=1
         shift 2 ;;
       --action|--object|--when|--stop|--grant|--grant=*)
-        fm_afk_contract_log "$1 was retired: the captain's away words are the whole mandate, so pass them with --words or --words-file and nothing else"
+        fm_afk_contract_log "$1 was retired: the record stores the captain's away words, so pass them with --words or --words-file and nothing else"
         return 2 ;;
       *)
         fm_afk_contract_log "unknown option '$1'"
