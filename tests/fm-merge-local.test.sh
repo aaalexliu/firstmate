@@ -87,6 +87,17 @@ test_away_yolo_local_landing() {
   pass 'yolo local landing reaches the approved head only under live away authority'
 }
 
+test_main_landing_ignores_invalid_away_record() {
+  make_case main-invalid-away
+  record_done || fail 'main fixture done head was not accepted'
+  printf 'version: 99\n' > "$HOME_DIR/state/.afk-contract"
+  FM_SUPERVISION_ACTOR=main land >/dev/null || fail 'invalid away record changed attended main landing'
+  [ "$(git -C "$PROJ" rev-parse HEAD)" = "$X" ] || fail 'main landing did not use the approved head'
+  [ -f "$PROJ/approved.txt" ] || fail 'main landing did not update the checkout'
+  [ -z "$(git -C "$PROJ" status --porcelain)" ] || fail 'main landing left a dirty checkout'
+  pass 'an invalid away record does not change attended main local landing'
+}
+
 test_branch_advance_does_not_change_approval() {
   make_case advanced
   record_done || fail 'done head was not accepted'
@@ -344,7 +355,7 @@ SH
   pass 'two approved tasks with the same tree cannot roll back a successful landing'
 }
 
-fm_test_run test_away_yolo_local_landing test_two_tasks_cannot_undo_a_same_tree_landing test_branch_advance_does_not_change_approval \
+fm_test_run test_main_landing_ignores_invalid_away_record test_away_yolo_local_landing test_two_tasks_cannot_undo_a_same_tree_landing test_branch_advance_does_not_change_approval \
   test_missing_and_malformed_head_refuse test_change_after_hold_check_refuses \
   test_diverged_default_refuses test_change_during_approval_check_refuses \
   test_snapshot_cannot_pin_a_replacement_task test_done_recording_preserves_caller_locks

@@ -1753,6 +1753,8 @@ test_away_digest_carries_standing_authority_but_quiet_is_unchanged() {
       assert_contains "$digest" 'decide as main would attended under standing rules' "daemon retains words-only authority"
       assert_contains "$digest" 'data/captain.md, data/captain-shared.md, and data/learnings.md' "daemon lacks home rule inputs"
       assert_contains "$digest" "resolved home data directory '$expected_data'" "daemon did not deliver the resolved home data path"
+      assert_contains "$digest" 'For a decision-bearing wake (needs-decision, ask-user, review-stop, blocked, or a merge or landing call), reread the current record' "daemon lacks decision-scoped standing-rule reads"
+      assert_contains "$digest" 'Heartbeats, routine progress, and still-busy updates alone do not require rereads.' "daemon still requires routine-wake rereads"
       assert_contains "$digest" 'Record standing-authority decisions and their rules' "daemon decisions lack a return audit"
     else
       assert_not_contains "$digest" 'Away decision procedure:' "away relocation changed quiet-mode instructions"

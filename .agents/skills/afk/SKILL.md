@@ -59,7 +59,8 @@ Hold-for-return is the default and the only reach profile this release records: 
 
 - The record exists, so the watcher never rechecks an item held for the captain, in either supervision shape; the return brief lists it instead.
   Declared external waits keep their condition-aware, hours-long recheck cadence (`bin/fm-watch.sh`, `bin/fm-classify-lib.sh`).
-- Before deciding on each wake, the away session reads the live record, the tracked `AGENTS.md`, and this home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, loading applicable policy skills.
+- Before deciding on a decision-bearing wake (needs-decision, ask-user, review-stop, blocked, or a merge or landing call), the away session rereads the live record, the tracked `AGENTS.md`, and this home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, loading applicable policy skills without relying on a remembered copy.
+  Heartbeats, routine progress, and still-busy updates alone do not require these rereads.
   Resolve home data from `FM_DATA_OVERRIDE`, otherwise `FM_HOME/data`, otherwise the tracked code root's `data/` when `FM_HOME` is unset; never substitute another code root for an explicit home.
   Absent files mean built-in defaults, while unreadable inputs block decisions that need them.
   Apply `bin/fm-branch-prompt.sh` "Postures" as MAIN would attended, including standing review rules and `ask-user-authority`, not a words-only or hold-on-doubt mandate.
@@ -98,7 +99,8 @@ When the captain wants this same token-saving supervision while staying present 
 afk changes how the captain is informed and what happens at a captain-owned decision point, **not who approves what**.
 "Away" never means "approves more" or "approves less."
 A PR ready for merge keeps the merge authority from `AGENTS.md` section 7, and a needs-decision finding keeps the `ask-user-authority` policy; anything requiring the captain still waits for the captain's explicit word.
-Standing yolo merge authority carries into away mode for PRs and local-only landings through `bin/fm-merge-local.sh`, subject to any restriction in the words; green work that still needs the captain's approval waits for the return unless the words already supply that concrete approval.
+The task's recorded effective yolo authority carries into away mode for PRs and local-only landings through `bin/fm-merge-local.sh`, subject to any restriction in the words; green work that still needs the captain's approval waits for the return unless the words already supply that concrete approval.
+A project's default never overrides the task's recorded `yolo=off`.
 Away authority never releases a captain hold, and it expires when the away record is archived.
 `--allow-red`, `--allow-missing`, and `--allow-no-pipeline` remain attended-only and are refused while the away record exists.
 A merge under away authority must be synchronous; `fm-pr-merge.sh` refuses auto-merge and any GitHub queue state that cannot prove an immediate merge while the away record exists.

@@ -583,7 +583,8 @@ A leftover `state/.afk` flag declines nothing.
   Supervision continuity is the safety property, and the return brief's health section reads any gap.
 - The wake message ends with a fixed `POSTURE: AWAY` tail plus the record's read-back verbatim (`bin/fm-afk-contract.sh readback`).
   The branch therefore has the captain's away words, the spend cap, the expected return, and the reach line in front of it at execution time, without any prefix change.
-  That tail also directs it to read the tracked `AGENTS.md`, the home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, and applicable skills before deciding.
+  That tail directs it to reread the tracked `AGENTS.md`, the home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, and applicable skills before deciding on needs-decision, ask-user, review-stop, blocked, or a merge or landing call, without relying on a remembered copy.
+  Heartbeats, routine progress, and still-busy updates alone do not require rereads.
   Home inputs resolve from `FM_DATA_OVERRIDE`, otherwise `FM_HOME/data`, otherwise the tracked code root's `data/` when `FM_HOME` is unset; never substitute another code root for an explicit home.
   A read instruction keeps private and changing rules out of the cached prefix.
 - Captain-verdict outcomes accumulate unprocessed in the outcome store.
@@ -606,7 +607,8 @@ An archived, incomplete, invalid, or quiet record restores the attended refusal 
 
 `bin/fm-branch-prompt.sh` "Postures" owns the execution rule: decide as main would attended under the full standing rules, holding only what main would bring to the captain even when present.
 The away words add to or narrow that authority; they are not the whole mandate.
-This includes worker decisions, review stops under standing review rules, scope calls inside accepted plans, unblocking dependents, dispatching authorized queued work, and green merges under the project's registered yolo posture.
+This includes worker decisions, review stops under standing review rules, scope calls inside accepted plans, unblocking dependents, dispatching authorized queued work, and green PR merges and local-only landings under the task's recorded effective yolo authority.
+A project's standing default never overrides a task's recorded `yolo=off`; absent concrete approval in the away words, that task waits for the captain.
 Ask-user findings follow the same `ask-user-authority` judgment as attended main.
 The prompt owns the audit markers for decisions under standing authority and actions under the words.
 

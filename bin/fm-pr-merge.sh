@@ -181,7 +181,7 @@
 # merges stay attended: bin/fm-afk-contract.sh mode) any green merge may
 # proceed under away authority:
 # the record's presence is the mechanical fact; the supervision session applies
-# the project's registered yolo posture and standing rules, plus any additions
+# the task's recorded effective yolo authority and standing rules, plus any additions
 # or restrictions in the away words (bin/fm-branch-prompt.sh "Postures").
 # An unreadable record refuses rather
 # than being skipped, neither posture releases a captain hold, and away

@@ -51,8 +51,8 @@ META="$STATE/$ID.meta"
 # shellcheck source=bin/fm-lease-lib.sh
 . "$SCRIPT_DIR/fm-lease-lib.sh"
 fm_lease_forbid_branch "local-only landing (fm-merge-local)" --away-relocated
-# shellcheck source=bin/fm-merge-authority-lib.sh
-. "$SCRIPT_DIR/fm-merge-authority-lib.sh"
+# shellcheck source=bin/fm-afk-contract.sh
+. "$SCRIPT_DIR/fm-afk-contract.sh"
 
 [ -f "$META" ] || { echo "error: no meta for task $ID at $META" >&2; exit 1; }
 if ! fm_backlog_meta_spawn_gen_optional "$META" "$STATE"; then
@@ -174,10 +174,6 @@ if [ "$(fm_dod_local_done_head "$META")" != "$MERGE_HEAD" ] || ! local_head_matc
 fi
 fm_afk_contract_lock_hold "$STATE" || exit 1
 fm_lease_forbid_branch "local-only landing (fm-merge-local)" --away-relocated
-if ! fm_merge_authority_resolve "$FM_HOME" "$STATE" "$META" "$ID"; then
-  echo "error: local merge refused: the away-posture record could not be read" >&2
-  exit 1
-fi
 merge_status=0
 # Stage the fast-forward with Git's two-tree checkout, which preserves local
 # changes made since the clean-tree check and refuses obstructing files.
