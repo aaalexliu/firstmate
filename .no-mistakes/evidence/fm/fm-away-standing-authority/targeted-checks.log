@@ -1,0 +1,109 @@
+FM_TEST_BEGIN 2026-11-07T05:25:24Z tests/fm-afk-contract.test.sh family=afk expected_gate_skip=none
+ok - the read-back renders the words verbatim beside the expected return, spend cap, and reach line
+ok - words preserve their final newline shape in storage and read-back
+ok - one enter call writes a version 2 record, announces hold-for-return only, reads it back without asking for a go, and every read subcommand reflects it
+ok - entry without --spend records the live worker count, never below the default floor, and an explicit --spend still wins
+ok - the retired propose, confirm, and --proposal inputs are refused by name and write nothing
+ok - enter removes a proposal an older version left behind and records only the new words
+ok - a same-turn entry records never-set words verbatim, adds no authority field, and restates the never-set
+ok - a plain entry records no mandate in one step, and a refresh leaves the standing record untouched
+ok - new words archive the old words and keep the session start
+ok - a failed replacement keeps the standing posture live
+ok - a failed final replacement publication rolls back its superseded archive
+ok - validation and archive refuse damaged words blocks
+ok - a words line that lost its record prefix fails validate, read, read-back, and archive instead of truncating the mandate
+ok - archive keys the record by its entry time, empties the posture, and is idempotent
+ok - malformed inputs and foreign record versions are refused rather than guessed
+ok - retired clause fields, --grant, and the clause and grant subcommands are refused by name
+ok - a version 1 record validates, reads its words and scalars with the clause and grant sections ignored, refreshes untouched, and archives
+ok - new words over a live version 1 record archive it and write version 2 with the same session start
+ok - enter and archive refuse while the record is locked, and proceed once it clears
+ok - a quiet record announces, refreshes, and reads back as a present captain holding nothing, while an away record keeps hold-for-return
+ok - an away entry over quiet mode records away, and a quiet entry never masks a standing away record
+FM_TEST_END 2026-11-07T05:25:50Z tests/fm-afk-contract.test.sh exit=0 duration_ms=25195 gate_skip=false
+FM_TEST_BEGIN 2026-11-07T05:25:50Z tests/fm-merge-local.test.sh family=pure-contract-unit expected_gate_skip=none
+1..10
+ok - an invalid away record does not change attended main local landing
+note: local-only landing (fm-merge-local) proceeds for the supervision branch under the away-posture record: main is parked and its standing authority is relocated; this script's own gate still applies (docs/pi-supervision-branch.md "Postures")
+note: local-only landing (fm-merge-local) proceeds for the supervision branch under the away-posture record: main is parked and its standing authority is relocated; this script's own gate still applies (docs/pi-supervision-branch.md "Postures")
+ok - yolo local landing reaches the approved head only under live away authority
+ok - two approved tasks with the same tree cannot roll back a successful landing
+ok - branch advance refuses, and restoring the reported X lands exactly X
+ok - missing, malformed and ambiguous done heads refuse without moving main
+ok - a branch move inside the final Git invocation refuses without changing main or its checkout
+ok - a diverged default branch refuses without changing main or its checkout
+ok - approval and branch changes during the hold read refuse without moving main
+ok - captured metadata cannot pin a replacement task generation
+ok - ledger and teardown record the first done head without reacquiring or releasing caller locks
+FM_TEST_COMPLETE
+FM_TEST_END 2026-11-07T05:26:22Z tests/fm-merge-local.test.sh exit=0 duration_ms=32595 gate_skip=false
+FM_TEST_BEGIN 2026-11-07T05:26:22Z tests/fm-afk-return.test.sh family=afk expected_gate_skip=none
+ok - return catch-up owns live blocker remediation, reports itself to Bearings as content, preserves evidence once, and clears idempotently
+ok - tmux and Herdr blockers require the same explicit durable reclassification before ordinary work
+ok - needs-decision remains reportable without masquerading as a firstmate-actionable blocker
+ok - AFK return re-drains published wakes until handling acknowledges
+ok - away-mode re-entry fails closed while the prior return catch-up is pending
+ok - /quiet off's return path keeps its existing behavior without an away decision account
+ok - check retries recorded terminal teardown and keeps catch-up gated until success
+ok - an unreadable superseded mandate stays required until its record validates
+ok - the retained contract epoch requires its final archive on every check
+ok - the return brief renders health, the words with the session account, waiting, could-not-fix, handled, and cost from durable records, and the gate shrinks to what the away session could not fix
+ok - return lists standing-authority decisions and their rules for reversal even with no away words
+ok - the return brief lists landed work whose worker is still up, from the durable merge marker only, without gating on it and never offering a secondmate for teardown
+ok - the return brief points at the drain for branch outcomes on a host home and leaves the read cursor to it, and a Pi home's brief is unchanged
+ok - the all-silent return keeps the outcome stored without promising a drain presentation
+ok - a drain that cannot record its branch-outcome presentation keeps the return's catch-up gated until a check records it
+ok - a refreshed posture keeps its original window, superseded mandate, and earlier outcomes
+ok - a malformed posture record stays live and gates return catch-up
+ok - an epochless malformed record remains required until restored valid
+ok - an unreadable outcome store gates catch-up until a successful reread
+ok - an unavailable held listing gates catch-up until a successful reread
+ok - an unreadable status stays private and gates until a successful reread
+ok - a status-file-less leftover record gates return; a readable status on that same record is the proven path that passes
+ok - a leftover record with a readable status file lets return catch-up clear
+ok - the read-only guard treats the away-posture record as active away mode without the legacy flag
+ok - the return brief leads with supervisor health and names every detected gap
+ok - the return brief does not report an already-acked watcher-down marker as an open gap
+ok - the return brief reports a wake mid-handling at return as information, and only an open downtime episode as a gap
+ok - the return brief's failures section names an engine latch inside the away window with its time, error count, and cooldown state
+ok - a lost second trip append does not attach the current pause to a recovered episode
+ok - a recovered row preceding the stale retry time does not invent a second trip
+ok - a later failed probe does not change the trip-row error count
+ok - the return brief excludes prior-session latch rows
+ok - the return brief retains in-window trips and failed turns across a main restart
+ok - a return with only the legacy away flag still renders the brief and measures the window from the flag
+FM_TEST_END 2026-11-07T05:28:49Z tests/fm-afk-return.test.sh exit=0 duration_ms=146337 gate_skip=false
+FM_TEST_BEGIN 2026-11-07T05:28:49Z tests/fm-send-resolve-key.test.sh family=backend-dispatch expected_gate_skip=none
+ok - fm-send --resolve-key: the answer send itself closes the open decision
+ok - fm-send --resolve-key: the close never re-wakes its own home, later lines still do
+ok - fm-send --resolve-key: separate answers do not each re-wake; later lines still do
+ok - fm-send --resolve-key: a colon-first stated key is open under that key and answerable
+ok - fm-send --resolve-key: an answer that starts a workstream leaves no orphaned decision
+ok - fm-send preserves decisions through routine work and refuses superseded terminal decisions
+ok - fm-send --resolve-key: a key that is not open refuses loudly before anything is sent
+ok - fm-send --resolve-key: the close happens at enqueue, surviving a failed doorbell
+ok - fm-send --resolve-key: a failed enqueue never closes the decision
+ok - fm-send --resolve-key: one answer closes each named key and only those
+ok - fm-send --resolve-key: one answer's closes after a drain fold never wake this home
+ok - fm-send --resolve-key: a marked local-secondmate answer closes with the plain answer text
+ok - fm-send --resolve-key: a remote-secondmate answer closes the same local ledger, transport-only difference
+ok - fm-send --resolve-key: a remote reply's leading [corr=...] tag no longer blocks closing its stated key
+ok - fm-send --resolve-key: a failed remote transport never closes the decision
+ok - fm-send --resolve-key: --key, empty message, explicit targets, and malformed keys refuse loudly
+ok - fm-send --resolve-key: a reserved pending-reply key actually closes through the operator path
+ok - fm-send --resolve-key: an unrelated writer cannot close or hijack a reserved key, and the operator close still can
+ok - fm-send --resolve-key: a reserved key this send cannot close refuses loudly before anything is sent
+ok - fm-send --resolve-key: an overlong decision key refuses before sending
+ok - fm-send --resolve-key: a stamped close line stays inside the status-line cap
+ok - fm-send --resolve-key: failed-close recovery commands safely quote operator text and paths
+ok - fm-send --resolve-key: a remote secondmate reserved-key close is the same local ledger append
+ok - fm-send --resolve-key: a decision answer refuses the attended branch before sending, a blocked: key stays steering, and the away-posture record relocates the answer
+FM_TEST_END 2026-11-07T05:30:07Z tests/fm-send-resolve-key.test.sh exit=0 duration_ms=77979 gate_skip=false
+FM_TEST_SUMMARY total=4 failed=0 skipped_gate=0 duration_ms=282502
+FM_TEST_SUMMARY_FAMILY family=afk count=2 duration_ms=171532 failed=0
+FM_TEST_SUMMARY_FAMILY family=backend-dispatch count=1 duration_ms=77979 failed=0
+FM_TEST_SUMMARY_FAMILY family=pure-contract-unit count=1 duration_ms=32595 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-afk-return.test.sh duration_ms=146337
+FM_TEST_SLOWEST rank=2 script=tests/fm-send-resolve-key.test.sh duration_ms=77979
+FM_TEST_SLOWEST rank=3 script=tests/fm-merge-local.test.sh duration_ms=32595
+FM_TEST_SLOWEST rank=4 script=tests/fm-afk-contract.test.sh duration_ms=25195

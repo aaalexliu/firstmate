@@ -1,0 +1,5 @@
+schema=fm-task-inbox.v1
+at=2026-11-07T05:37:08Z
+body-terminator=1
+--
+Decision csv-empty: Fix. Restore empty optional CSV field as an empty cell (not literal null), focused regression test only; no broader changes.

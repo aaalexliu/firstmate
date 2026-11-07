@@ -1,0 +1,42 @@
+{run-worktree}/.live-validation/return-home
+1
+Away posture recorded at 2026-11-07T05:31:48Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. No away instructions were recorded; the away session decides under your standing rules as firstmate would with you present, including green merges you already authorized. Only calls that need you wait for your return. The return brief lists its decisions so you can reverse them. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 4 concurrent workers.
+Away posture (recorded):
+  entered: 2026-11-07T05:31:48Z
+  expected return: not given
+  spend cap: 4 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+  your words: (none)
+2
+3
+4
+5
+6
+fm-afk-launch: away-posture record archived at {run-worktree}/.live-validation/return-home/state/afk-contracts/1794029508.afk-contract
+fm-afk-launch: away mode stopped; no daemon terminal was running, .afk cleared, and the posture record archived
+=== Return brief (away 2026-11-07T05:31:48Z -> 2026-11-07T05:31:52Z, 4s) ===
+Supervisor health:
+  - GAP: the away daemon was not running at return (the away flag stood with no live daemon)
+Your instructions:
+  (no away instructions recorded)
+  the away session took no action under them.
+Decisions under your standing authority (you can reverse these):
+  - review: per your standing authority: ask-user-authority permits restoring accepted CSV export; authorized the in-scope correction.
+  - mixed: per your standing authority: task yolo=on permits landing; per your away instructions: keep the schema unchanged; approved local export fix only.
+  - money: per your standing authority: financial acceptance needs the captain; declined purchase and held for return.
+Waiting on you:
+  escalated by the away session:
+    - money: per your standing authority: financial acceptance needs the captain; declined purchase and held for return.
+Tried and failed, or could not be fixed:
+  (nothing)
+Landed, cleanup due:
+  (nothing)
+Handled while away:
+  5 outcome(s) handled by the away session (4 routine, 1 escalated above)
+  4 routine outcome(s) recorded; the latest visible:
+    - review: per your standing authority: ask-user-authority permits restoring accepted CSV export; authorized the in-scope correction.
+    - mixed: per your standing authority: task yolo=on permits landing; per your away instructions: keep the schema unchanged; approved local export fix only.
+    - near: per your standing authority without a colon is not the decision marker.
+Cost: 5 supervision outcome(s) recorded (4 routine, 1 captain); 0 task(s) live at return.
+catch-up health: GAP: the away daemon was not running at return (the away flag stood with no live daemon)
+fm-afk-return: catch-up clear; ordinary captain work may proceed

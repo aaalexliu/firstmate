@@ -1,0 +1,8 @@
+1794029620	start	gen=host-66484-1794029619	primary=claude
+1794029656	handled	turn=host-66484-1794029619.1	posture=away	rc=0	reports=1	error=0 cost=0.10353 conversation_cost=0.10353 input=16 cache_read=132196 cache_write=20017 output=1021 turns=8	signal: {run-worktree}/.live-validation/model-home/state/standing-local.status
+1794029759	handled	turn=host-66484-1794029619.2	posture=away	rc=0	reports=1	error=0 cost=0.047464 conversation_cost=0.150994 input=16 cache_read=156004 cache_write=4303 output=1462 turns=7	signal: {run-worktree}/.live-validation/model-home/state/decision-fix.status
+1794029774	handled	turn=host-66484-1794029619.3	posture=away	rc=0	reports=1	error=0 cost=0.026013 conversation_cost=0.177007 input=10 cache_read=101333 cache_write=1945 output=808 turns=4	stale: primary:0
+1794029842	handled	turn=host-66484-1794029619.4	posture=away	rc=0	reports=1	error=0 cost=0.028376 conversation_cost=0.205383 input=10 cache_read=110517 cache_write=2606 output=688 turns=4	signal: {run-worktree}/.live-validation/model-home/state/decision-fix.status
+1794029858	handled	turn=host-66484-1794029619.5	posture=away	rc=0	reports=1	error=0 cost=0.021913 conversation_cost=0.227296 input=8 cache_read=89311 cache_write=1964 output=511 turns=3	stale: primary:fm-decision-fix
+1794029873	handled	turn=host-66484-1794029619.6	posture=away	rc=0	reports=1	error=0 cost=0.019597 conversation_cost=0.246893 input=8 cache_read=94727 cache_write=1512 output=406 turns=3	stale: primary:fm-decision-fix
+1794029883	to-main	the away session could not take this wake: a queued wake could not be read or resolved to a task record, so its scope is unknown; this wake is yours

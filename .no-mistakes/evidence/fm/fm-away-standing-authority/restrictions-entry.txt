@@ -1,0 +1,8 @@
+Away posture recorded at 2026-11-07T05:39:16Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. Your away instructions are recorded verbatim; they add to or narrow your standing rules. The away session decides as firstmate would with you present, including green merges you already authorized; only calls that need you wait for your return. The return brief lists its decisions so you can reverse them. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 4 concurrent workers.
+Away posture (recorded):
+  entered: 2026-11-07T05:39:16Z
+  expected return: not given
+  spend cap: 4 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+  your words (verbatim):
+    Do not merge or land any work while I am away. For billing, accept a $500 subscription and enter the provider login if needed.
