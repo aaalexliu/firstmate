@@ -3217,6 +3217,31 @@ ok - under the away-posture record the wake carries the verbatim read-back tail,
 
 The merge suite and the security suite dominate the wall time.
 
+### 2026-11-07 away standing authority and return account
+
+Verified on Darwin 25.6.0 arm64 with Node v26.12.1 and Pi package 1.5.0.
+The branch, host, and daemon regressions verify delivery of the standing-rule read instructions and decision contract, not a live model's adherence.
+No model was prompted and no provider call was made.
+
+```sh
+bash bin/fm-test-run.sh tests/fm-branch-supervision.test.sh
+bash bin/fm-test-run.sh tests/fm-afk-contract.test.sh tests/fm-afk-return.test.sh
+bash bin/fm-test-run.sh tests/fm-daemon.test.sh tests/fm-send-resolve-key.test.sh tests/fm-supervision-host-drain.test.sh
+FM_PI_PACKAGE_DIR=/opt/homebrew/Cellar/pi-coding-agent/1.4.0/libexec/lib/node_modules/@earendil-works/pi-coding-agent bash bin/fm-test-run.sh tests/fm-pi-branch-extension.test.sh
+bash bin/fm-test-run.sh tests/fm-pr-merge.test.sh
+```
+
+```text
+ok - branch prompt is byte-stable across home rules, cwd, timezone, and time, and delivers the standing-away authority contract
+ok - daemon away digests carry standing-rule reads and decision audit instructions without changing quiet mode
+ok - return lists standing-authority decisions and their rules for reversal even with no away words
+ok - /quiet off's return path keeps its existing behavior without an away decision account
+```
+
+The merge and decision-answer suites exercise standing authority with no extra away words and restore the branch refusal after archive.
+The entry and return suites preserve quiet-mode behavior.
+Live Herdr launcher coverage remains unverified here: its fleet-state tripwire refused before lab preparation.
+
 ## Native Codex through Pi
 
 Verified on 2026-09-08 with Pi 0.85.1 and the installed `pi-codex-native` 0.2.1 adapter.

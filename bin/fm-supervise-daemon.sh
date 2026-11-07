@@ -988,7 +988,10 @@ escalate_flush() {  # <state>
   fi
   # Single-line wrapper: no embedded newlines (inject_msg also collapses as a
   # safety net, but keeping the source single-line makes the intent explicit).
-  msg=$(printf 'Supervisor escalate (%s event(s)): %s (pre-read; re-arm not needed — watcher daemon-managed)' "$ESCALATE_EVENTS" "$msg")
+  msg=$(printf 'Supervisor escalate (%s event(s)): %s (pre-read; re-arm not needed - watcher daemon-managed)' "$ESCALATE_EVENTS" "$msg")
+  if fm_afk_contract_away_present "$state"; then
+    msg="$msg Away decision procedure: load the afk skill and read the current record with bin/fm-afk-contract.sh readback, AGENTS.md from the tracked code root, and data/captain.md, data/captain-shared.md, and data/learnings.md from FM_DATA_OVERRIDE or FM_HOME/data, not the code-root working directory. Apply bin/fm-branch-prompt.sh Postures: decide as main would attended under standing rules plus additions or restrictions in the away words; hold only true captain calls. Record standing-authority decisions and their rules in visible outcome summaries for the return brief, as the afk skill directs."
+  fi
   [ "${FM_SUPERVISOR_BACKEND:-tmux}" != t3code ] || id="fm-digest-$(_now)-$$-$RANDOM$RANDOM"
   if inject_msg "$msg" "$state" "" "$id"; then
     unknown_wake_acknowledge_flushed "$state" "$buf" \

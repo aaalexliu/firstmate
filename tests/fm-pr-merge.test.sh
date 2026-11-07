@@ -4303,7 +4303,7 @@ test_away_branch_actor_merges_green_under_the_record() {
   [ ! -e "$case_dir/gh.log" ] || assert_no_grep 'pr ' "$case_dir/gh.log" \
     "away-branch-attended: gh ran for an attended branch merge"
 
-  # No yolo and no grant list: the record alone relocates the green merge.
+  # An explicit merge instruction uses the same mechanical relocation gate.
   case_dir=$(make_case away-branch-green)
   mkdir -p "$case_dir/wt" "$case_dir/home"
   add_gh_mocks "$case_dir" "$head"
@@ -4316,6 +4316,19 @@ test_away_branch_actor_merges_green_under_the_record() {
   assert_logged_gh_merge "$case_dir" 93 example/repo --squash
   assert_grep "merge landed: task-x1 $url away" "$case_dir/state/.wake-queue" \
     "away-branch-green: the durable outcome did not tag away"
+
+  # Standing yolo authority needs no extra away words for the branch either.
+  case_dir=$(make_case away-branch-standing-yolo)
+  mkdir -p "$case_dir/wt" "$case_dir/home"
+  add_gh_mocks "$case_dir" "$head"
+  printf '\nyolo=on\n' >> "$case_dir/state/task-x1.meta"
+  write_away_record "$case_dir"
+  FM_SUPERVISION_ACTOR=branch FM_TEST_HOME="$case_dir/home" run_pr_merge "$case_dir" task-x1 "$url" \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "away-branch-standing-yolo: a green merge must not require extra away words: $(cat "$case_dir/stderr")"
+  assert_logged_gh_merge "$case_dir" 93 example/repo --squash
+  assert_grep "merge landed: task-x1 $url away" "$case_dir/state/.wake-queue" \
+    "away-branch-standing-yolo: the standing-authority merge lost its away audit"
 
   # The green gate is absolute in this posture for the branch as for main: a
   # red check refuses on its own, and the attended waiver is refused too.

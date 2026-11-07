@@ -2069,9 +2069,9 @@ fi
 # the away-posture record exists main is parked and a fresh spawn of queued
 # work relocates to the branch, under the record's spend cap below - the same
 # cap main meets in that posture. Queued means a dispatchable backlog item:
-# one already queued at entry, or one the branch filed itself because the
-# captain's away words explicitly call for that work (its backlog note cites
-# the words); filing the item the captain asked for is not inventing work.
+# one already queued at entry, or authorized work filed as main would attended
+# under standing rules or the captain's away words (the backlog note names
+# that basis); relocation does not authorize inventing work.
 # shellcheck source=bin/fm-lease-lib.sh
 . "$SCRIPT_DIR/fm-lease-lib.sh"
 if [ "$RELAUNCH" -ne 1 ]; then
@@ -2121,7 +2121,7 @@ spawn_require_relocated_queued_work() {
   fi
   fm_lease_forbid_branch "new-task spawn (fm-spawn)" --away-relocated
   if ! fm_backlog_row_probe "$DATA" "$ID" || [ "$FM_BACKLOG_ROW_STATE" != "queued no no" ]; then
-    echo "error: spawn refused - the supervision branch under the away-posture record may dispatch only queued unblocked work (already queued, or filed by the branch from the captain's away words); task $ID has no dispatchable backlog item in this home" >&2
+    echo "error: spawn refused - the supervision branch under the away-posture record may dispatch only queued unblocked work authorized by standing rules or the captain's away words; task $ID has no dispatchable backlog item in this home" >&2
     exit 1
   fi
 }
@@ -4514,7 +4514,7 @@ if fm_backlog_transition_applies "$CONFIG" "$DATA" "$KIND"; then
   spawn_preflight_actor=$(fm_lease_actor) || exit "$FM_LEASE_REFUSE_EXIT"
   if [ "$RELAUNCH" -ne 1 ] && [ "$spawn_preflight_actor" = branch ] && fm_lease_away_relocated; then
     if [ "$BACKLOG_ROW_STATE" != "queued no no" ]; then
-      echo "error: spawn refused - the supervision branch under the away-posture record may dispatch only queued unblocked work (already queued, or filed by the branch from the captain's away words); task $ID has no dispatchable backlog item in this home" >&2
+      echo "error: spawn refused - the supervision branch under the away-posture record may dispatch only queued unblocked work authorized by standing rules or the captain's away words; task $ID has no dispatchable backlog item in this home" >&2
       exit 1
     fi
   elif ! fm_backlog_row_dispatchable "$BACKLOG_ROW_STATE"; then

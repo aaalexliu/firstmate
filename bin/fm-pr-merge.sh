@@ -180,9 +180,10 @@
 # an away record exists (a quiet-mode record is a present captain, so its
 # merges stay attended: bin/fm-afk-contract.sh mode) any green merge may
 # proceed under away authority:
-# the record's presence is the whole mechanical fact, and which merge the
-# captain's away words meant is the supervision session's reading
-# (bin/fm-branch-prompt.sh "Postures"). An unreadable record refuses rather
+# the record's presence is the mechanical fact; the supervision session applies
+# the project's registered yolo posture and standing rules, plus any additions
+# or restrictions in the away words (bin/fm-branch-prompt.sh "Postures").
+# An unreadable record refuses rather
 # than being skipped, neither posture releases a captain hold, and away
 # authority lapses when the record is archived.
 # The authority read and synchronous forge command share the away record's

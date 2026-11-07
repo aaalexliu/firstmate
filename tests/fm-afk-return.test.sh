@@ -23,6 +23,7 @@ install_runner() {  # <case-dir>
   local dir=$1
   mkdir -p "$dir/bin" "$dir/home/state" "$dir/home/data" "$dir/home/config"
   cp "$ROOT/bin/fm-afk-return.sh" "$dir/bin/"
+  cp "$ROOT/bin/fm-supervision-engine-lib.sh" "$dir/bin/"
   cp "$ROOT/bin/fm-wake-lib.sh" "$dir/bin/"
   cp "$ROOT/bin/fm-lock-lib.sh" "$dir/bin/"
   cp "$ROOT/bin/fm-path-lib.sh" "$dir/bin/"
@@ -327,7 +328,14 @@ test_return_is_mode_agnostic_for_quiet_mode() {
   assert_contains "$out" 'catch-up clear' "quiet-mode return did not announce ordinary work may proceed"
   [ ! -e "$dir/home/state/.afk" ] || fail "quiet-mode return left the mode flag behind"
   [ "$(wc -l < "$dir/home/stop.log" | tr -d ' ')" -eq 1 ] || fail "quiet-mode return did not stop the daemon exactly once"
-  pass "/quiet off's return path behaves identically for a quiet-content flag as for a legacy away-content one"
+  assert_not_contains "$out" 'Decisions under your standing authority' "a legacy quiet exit gained an away-only section"
+  dir="$TMP_ROOT/quiet-record-return"
+  install_runner "$dir"
+  FM_AFK_MODE=quiet contract_in "$dir" enter >/dev/null || fail "quiet record entry failed"
+  : > "$dir/home/state/.fake-drain"
+  out=$(run_return "$dir" begin) || fail "quiet record return failed: $out"
+  assert_not_contains "$out" 'Decisions under your standing authority' "a quiet record exit gained an away-only section"
+  pass "/quiet off's return path keeps its existing behavior without an away decision account"
 }
 
 test_check_retries_recorded_terminal_teardown() {
@@ -438,7 +446,7 @@ test_return_brief_composes_from_record_store_and_held_set() {
   [ "$health_line" -lt "$words_line" ] && [ "$words_line" -lt "$waiting_line" ] && [ "$waiting_line" -lt "$failed_line" ] \
     || fail "the brief sections are out of order (health $health_line, instructions $words_line, waiting $waiting_line, failed $failed_line)"
   assert_contains "$out" $'  your words at entry:\n    merge the windows fix when green, then cut a prerelease\n    if the install deadlocks abort the competing run\n' "the captain's verbatim words were not carried into the brief"
-  assert_contains "$out" $'  the away session acted on them:\n    - fix-windows: per your away instructions: merged the windows fix PR once checks went green\n    - prerelease: per your away instructions: filed and dispatched the prerelease cut; it needs your review\nWaiting on you:\n' "the session's account listed something other than exactly the two actions taken under the words"
+  assert_contains "$out" $'  the away session acted on them:\n    - fix-windows: per your away instructions: merged the windows fix PR once checks went green\n    - prerelease: per your away instructions: filed and dispatched the prerelease cut; it needs your review\nDecisions under your standing authority (you can reverse these):\n  (none)\nWaiting on you:\n' "the session's account listed something other than exactly the two actions taken under the words"
   assert_not_contains "$out" $'acted on them:\n    - other:' "an outcome that did not cite the words was listed as an action under them"
   assert_not_contains "$out" $'acted on them:\n    - held-note:' "a summary opening with the marker's words but no colon was listed as an action under them"
   assert_not_contains "$out" 'still building' "the return brief rendered a silent routine outcome"
@@ -472,6 +480,41 @@ test_return_brief_composes_from_record_store_and_held_set() {
   FM_HOME="$dir/home" FM_STATE_OVERRIDE="$dir/home/state" "$dir/bin/fm-afk-return.sh" guard \
     || fail "guard still refused after the record was archived and the gate cleared"
   pass "the return brief renders health, the words with the session account, waiting, could-not-fix, handled, and cost from durable records, and the gate shrinks to what the away session could not fix"
+}
+
+test_return_lists_standing_decisions_without_away_words() {
+  local dir out account second rc
+  dir="$TMP_ROOT/standing-decisions"
+  install_runner "$dir"
+  contract_in "$dir" enter >/dev/null 2>&1 || fail "plain away entry failed"
+  seed_live_blocker "$dir" tmux dep
+  outcome_in "$dir" append --task review --verdict routine \
+    --summary 'per your standing authority: applied the standing review-round limit, authorized its extra fix round, and the worker resumed.' >/dev/null \
+    || fail "could not record the standing review decision"
+  outcome_in "$dir" append --task dependent --verdict routine \
+    --summary 'per your standing authority: applied the accepted plan dependency order and dispatched the next queued fix.' >/dev/null \
+    || fail "could not record the dependent dispatch"
+  outcome_in "$dir" append --task near-miss --verdict routine \
+    --summary 'per your standing authority was not needed; no decision taken.' >/dev/null \
+    || fail "could not record the near miss"
+  outcome_in "$dir" append --task silent --verdict routine --silent true \
+    --summary 'per your standing authority: no change.' >/dev/null \
+    || fail "could not record a silent row"
+  touch "$dir/home/state/.last-watcher-beat"
+  : > "$dir/home/state/.fake-drain"
+  rc=0
+  out=$(run_return "$dir" begin) || rc=$?
+  [ "$rc" -eq 3 ] || fail "the live blocker should keep the return window open (rc=$rc): $out"
+  assert_contains "$out" '(no away instructions recorded)' "standing authority must not need away words"
+  account=$(printf '%s\n' "$out" | awk '/^Decisions under your standing authority/{show=1; next} /^Waiting on you:/{show=0} show')
+  assert_contains "$account" 'review: per your standing authority: applied the standing review-round limit' "return lost the review decision or its rule"
+  assert_contains "$account" 'dependent: per your standing authority: applied the accepted plan dependency order' "return lost the dispatch decision or its rule"
+  assert_not_contains "$account" 'near-miss:' "a non-marker row entered the decision account"
+  assert_not_contains "$account" 'silent:' "a silent row entered the decision account"
+  printf 'resolved [key=dep]: the upstream dependency landed\n' >> "$dir/home/state/repair-task.status"
+  second=$(run_return "$dir" check) || fail "repeat return failed: $second"
+  assert_contains "$second" "$account" "archiving lost the reversible decision account"
+  pass "return lists standing-authority decisions and their rules for reversal even with no away words"
 }
 
 # On a supervision-host home off Pi the drain's BRANCH OUTCOMES section is the
@@ -667,7 +710,7 @@ test_return_brief_keeps_refresh_history() {
   assert_contains "$out" '    first mandate: merge task first PR when green' "the superseded words were not rendered verbatim"
   assert_contains "$out" $'  your words at entry:\n    replacement mandate' "the final words were omitted"
   assert_contains "$out" 'first: completed before the mandate refresh' "the pre-refresh outcome was omitted"
-  assert_contains "$out" $'    replacement mandate\n    \n  the away session took no action under them.\nWaiting on you:' "the return brief dropped a trailing blank line from the final words or lost the empty account"
+  assert_contains "$out" $'    replacement mandate\n    \n  the away session took no action under them.\nDecisions under your standing authority (you can reverse these):\n  (none)\nWaiting on you:' "the return brief dropped a trailing blank line from the final words or lost the empty account"
   [ -f "$dir/home/state/afk-contracts/$first_epoch.afk-contract" ] || fail "return did not archive the final session record at the canonical path"
   pass "a refreshed posture keeps its original window, superseded mandate, and earlier outcomes"
 }
@@ -1363,6 +1406,7 @@ test_check_retries_recorded_terminal_teardown
 test_unreadable_superseded_archive_keeps_return_gated
 test_missing_final_archive_keeps_retained_contract_gated
 test_return_brief_composes_from_record_store_and_held_set
+test_return_lists_standing_decisions_without_away_words
 test_return_brief_lists_landed_work_awaiting_cleanup
 test_return_brief_points_at_the_drain_on_a_host_home_only
 test_return_brief_all_silent_window_does_not_point_at_drain

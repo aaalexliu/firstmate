@@ -20,7 +20,10 @@ test_branch_prompt_is_byte_stable_and_above_cache_floor() {
   local home_a home_b out_a out_b out_c size
   home_a="$TMP_ROOT/prompt-home-a"
   home_b="$TMP_ROOT/prompt-home-b"
-  mkdir -p "$home_a/state" "$home_b/state"
+  mkdir -p "$home_a/state" "$home_b/state" "$home_a/data" "$home_b/data"
+  printf 'Standing review rule: permit the approved extra round.\n' > "$home_a/data/captain.md"
+  printf 'Shared preferences from a different home.\n' > "$home_b/data/captain-shared.md"
+  printf 'A private operational lesson.\n' > "$home_b/data/learnings.md"
   # Give the two homes deliberately different fleet state and clock context:
   # a byte-stable prompt must not absorb any of it.
   printf 'signal: task-1 done\n' > "$home_a/state/task-1.status"
@@ -69,7 +72,16 @@ test_branch_prompt_is_byte_stable_and_above_cache_floor() {
     *"A second mate's status log is a relay channel for its child work"*"retiring a second mate is MAIN's alone"*"Report a second mate's signal wake from the status lines that wake newly presents"*"A second mate's stale wake is a liveness event: report it even when it presents no new status lines."*) ;;
     *) fail "branch prompt lost the second-mate relay, signal-span, or stale-liveness rule" ;;
   esac
-  pass "branch prompt is byte-stable across homes, cwd, timezone, and time, above the cache floor"
+  assert_not_contains "$out_a" 'Standing review rule: permit the approved extra round.' "private preferences entered the prefix"
+  assert_not_contains "$out_b" 'A private operational lesson.' "home learnings entered the prefix"
+  assert_contains "$out_a" "MAIN's full standing authority relocates to you" "away authority must not depend on extra words"
+  assert_contains "$out_a" "Hold only what MAIN would bring to the captain even when present" "away decisions still hold on mere doubt"
+  assert_contains "$out_a" "scope calls inside accepted plans as MAIN would under the standing rules" "standing scope and review decisions did not relocate"
+  assert_contains "$out_a" "project's registered yolo posture" "standing merge authority did not relocate"
+  assert_contains "$out_a" 'per your standing authority:' "standing decisions have no return-audit marker"
+  assert_contains "$out_a" 'naming the rule relied on' "decision audit omits the standing rule"
+  assert_not_contains "$out_a" 'Never by analogy: act only where the words plainly name' "old words-only rule survived"
+  pass "branch prompt is byte-stable across home rules, cwd, timezone, and time, and delivers the standing-away authority contract"
 }
 
 test_branch_prompt_routes_completed_scouts_through_guarded_cleanup() {
