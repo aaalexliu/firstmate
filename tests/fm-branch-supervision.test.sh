@@ -1345,12 +1345,6 @@ test_branch_cannot_force_teardown_or_directly_relaunch() {
 
 # --- away posture: main parked, standing authority relocated -----------------
 
-# The relocation is exactly bin/fm-lease-lib.sh's role-partition paragraph:
-# the branch passes the main-only partition for the PR merge and a fresh spawn
-# ONLY while a confirmed, live away-posture record exists; local-only landing
-# is never relocated; the record's spend cap binds a fresh ordinary spawn for
-# either actor; and an unconfirmed, archived, or invalid record is absence,
-# restoring the attended refusal byte for byte.
 test_away_record_relocates_main_owned_actions_to_the_branch() {
   local home root out status refusal
   home="$TMP_ROOT/away-home"
@@ -1378,11 +1372,10 @@ test_away_record_relocates_main_owned_actions_to_the_branch() {
   assert_contains "$out" "main is parked" "the relocation did not announce itself"
   assert_contains "$out" "task metadata is unavailable" "the merge did not reach its own gate under the record"
 
-  # Local-only landing is never relocated: it has no record-side gate.
   out=$(FM_HOME="$home" FM_SUPERVISION_ACTOR=branch "$ROOT/bin/fm-merge-local.sh" task-x 2>&1)
   status=$?
-  [ "$status" -eq 6 ] || fail "branch fm-merge-local was relocated under the record (exit $status): $out"
-  assert_contains "$out" "local-only landing (fm-merge-local) refused" "merge-local refusal lost its wording under the record"
+  [ "$status" -ne 6 ] || fail "branch fm-merge-local still hit the partition under the record: $out"
+  assert_contains "$out" "no meta for task" "local merge did not reach its task gate under the record"
 
   # A fresh spawn passes the partition and meets the spend cap: one ordinary
   # task record against a cap of 2, then a second ordinary record refuses.
@@ -1463,7 +1456,7 @@ WRAPPER
   [ "$status" -eq 6 ] || fail "quiet mode's record relocated the merge to the branch (exit $status): $out"
   assert_contains "$out" "$refusal" "the attended refusal changed under quiet mode's record"
   assert_not_contains "$out" "main is parked" "quiet mode's record announced a relocation"
-  pass "the away-posture record relocates the PR merge and a spawn under the spend cap to the branch, never local landing, and only while confirmed, valid, and away"
+  pass "the away-posture record relocates guarded merges and a spawn under the spend cap only while confirmed, valid, and away"
 }
 
 test_away_branch_spawn_requires_queued_dispatchable_work() {

@@ -134,7 +134,7 @@ No script parses them; use your judgment as MAIN would attended, and act only th
 - `bin/fm-spawn.sh`: dispatch queued work whose blockers cleared within the record's spend cap; file any newly authorized work under the `backlog` lease as MAIN would attended, preserving the captain's intent and noting the standing rule or away words that authorize it, never inventing work.
 - `bin/fm-send.sh` and `bin/fm-control.sh`: steer and recover workers as MAIN would attended, including unblocking dependents.
 - `bin/fm-send.sh --resolve-key`: answer worker decisions, review stops, and scope calls inside accepted plans as MAIN would under the standing rules; apply the ask-user-authority policy below to every ask-user finding, and use the captain's own answer when the away words pre-answer it.
-- `bin/fm-merge-local.sh` still refuses you: local-only landing waits for the captain in both postures.
+- `bin/fm-merge-local.sh`: land green, in-scope local-only work under the project's registered yolo posture or concrete approval in the away words, subject to any restrictions there and all existing landing guards; without merge authority it waits for the captain.
 Hold only what MAIN would bring to the captain even when present, not every uncertain implementation choice or decision the away words do not name.
 A policy or recovery playbook's escalation to MAIN is yours to decide under this same rule while away; a true captain call gets verdict captain and waits for the return.
 The never-set is absolute for every actor in every posture: credential entry, legal or financial acceptance, an attended prompt, any discard the captain did not name, and any destructive, irreversible, or security-sensitive action are refused whatever the words say.

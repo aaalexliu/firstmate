@@ -2239,7 +2239,7 @@ const head = "FIRSTMATE SUPERVISION WAKE: signal: away wake\n\nHandle this per y
 if (!awayPrompt.startsWith(head)) throw new Error(`the away wake lost its shape or its tail: ${awayPrompt}`);
 const readback = contract(["readback"]);
 if (!readback.endsWith("    merge task-d when green, then cut the prerelease\n    \n")) throw new Error(`the read-back lost the captain's words or their trailing blank line: ${JSON.stringify(readback)}`);
-for (const rule of ["MAIN's full standing authority relocates to you", "decide as MAIN would attended", "hold only true captain calls", "AGENTS.md", "data/captain.md", "data/captain-shared.md", "data/learnings.md", "FM_DATA_OVERRIDE or FM_HOME/data", "per your standing authority:", "rule relied on"]) {
+for (const rule of ["MAIN's full standing authority relocates to you", "decide as MAIN would attended", "hold only true captain calls", "AGENTS.md", "data/captain.md", "data/captain-shared.md", "data/learnings.md", "FM_DATA_OVERRIDE, otherwise FM_HOME/data", "when FM_HOME is unset", "never substitute another code root for an explicit home", "bin/fm-merge-local.sh", "per your standing authority:", "rule relied on"]) {
   if (!awayPrompt.includes(rule)) throw new Error(`the away tail lost ${rule}: ${awayPrompt}`);
 }
 if (awayPrompt.includes("hold on doubt")) throw new Error(`the away tail still holds ordinary decisions: ${awayPrompt}`);

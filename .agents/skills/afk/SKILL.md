@@ -50,7 +50,7 @@ Hold-for-return is the default and the only reach profile this release records: 
    Relay the announcement in spirit: hold-for-return only, no phone channel, your instructions add to or narrow standing rules, the away session decides as firstmate would with you present (including green merges already authorized), and only calls that need you wait for your return.
    The return brief lists decisions for reversal; destructive, irreversible, and security-sensitive actions remain never pre-authorizable whatever the words say.
    Then give your own plain-sentence restatement of the words in `AGENTS.md` section 9 language - what you read them as asking for, sentence by sentence, never a numbered field list - beside the expected return, the spend cap, and the one-sentence reach announcement.
-   Say plainly which sentence, if any, you could not act on while away (a red merge, a discard, anything on the never-set, local-only landing); it waits for their return.
+   Say plainly which sentence, if any, you could not act on while away (a red merge, a discard, anything on the never-set, a local-only landing without merge authority); it waits for their return.
    This read-back is informational: the record already stands, so never ask for a go or wait for a reply; a captain who wants a different reading sends `/afk` again with new words.
 4. **Do not separately arm `fm-watch.sh` where the daemon runs.** The daemon manages the watcher as its child; the singleton lock no-ops a stray arm harmlessly.
    On Pi nothing changes about arming: the supervision session's own cycle continues.
@@ -60,10 +60,11 @@ Hold-for-return is the default and the only reach profile this release records: 
 - The record exists, so the watcher never rechecks an item held for the captain, in either supervision shape; the return brief lists it instead.
   Declared external waits keep their condition-aware, hours-long recheck cadence (`bin/fm-watch.sh`, `bin/fm-classify-lib.sh`).
 - Before deciding on each wake, the away session reads the live record, the tracked `AGENTS.md`, and this home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, loading applicable policy skills.
-  Resolve home data from `FM_DATA_OVERRIDE` or `FM_HOME/data`, not the tracked code root; absent files mean built-in defaults, while unreadable inputs block decisions that need them.
+  Resolve home data from `FM_DATA_OVERRIDE`, otherwise `FM_HOME/data`, otherwise the tracked code root's `data/` when `FM_HOME` is unset; never substitute another code root for an explicit home.
+  Absent files mean built-in defaults, while unreadable inputs block decisions that need them.
   Apply `bin/fm-branch-prompt.sh` "Postures" as MAIN would attended, including standing review rules and `ask-user-authority`, not a words-only or hold-on-doubt mandate.
 - The branch records its decisions through its usual report surface.
-  Where the daemon injects into main instead, main records every away decision or action using `bin/fm-branch-outcome.sh append --task <id> --verdict routine|captain --summary <text>` with the same visible summary markers from "Postures"; a transcript alone is not the return audit.
+  For every away wake main handles while the live away record exists - daemon delivery, a Pi branch decline or failure, a host handback, or a no-engine wake - main records every decision or action using `bin/fm-branch-outcome.sh append --task <id> --verdict routine|captain --summary <text>` with the same visible summary markers from "Postures"; a transcript alone is not the return audit.
 - On Pi, main stays parked; only a wake the branch declines (including a broken branch or unsafe scan) or a watcher failure wakes main (`docs/pi-supervision-branch.md` "Postures").
 - On a non-Pi home that runs the supervision host, the host's engine is that branch under the same rules, and a wake it hands back reaches main through that harness's own wake path (`Stop hook feedback` on Claude, a `watcher` follow-up on Cursor, OpenCode, and omp, the arm's background-task-completed notification on Grok, the checkpoint's output on Codex) with a `supervision-host:` line: that is automatic supervision, never the captain's return, so handle it under the away posture ([supervision protocol](../../../docs/supervision-protocols/supervision-host.md)).
 - The session-start digest reports the posture under its AFK subsection, so a restart re-enters the posture from the record, not from memory.
@@ -97,7 +98,7 @@ When the captain wants this same token-saving supervision while staying present 
 afk changes how the captain is informed and what happens at a captain-owned decision point, **not who approves what**.
 "Away" never means "approves more" or "approves less."
 A PR ready for merge keeps the merge authority from `AGENTS.md` section 7, and a needs-decision finding keeps the `ask-user-authority` policy; anything requiring the captain still waits for the captain's explicit word.
-Standing yolo merge authority carries into away mode, subject to any restriction in the words; a green PR that still needs the captain's approval waits for the return unless the words already supply that concrete approval.
+Standing yolo merge authority carries into away mode for PRs and local-only landings through `bin/fm-merge-local.sh`, subject to any restriction in the words; green work that still needs the captain's approval waits for the return unless the words already supply that concrete approval.
 Away authority never releases a captain hold, and it expires when the away record is archived.
 `--allow-red`, `--allow-missing`, and `--allow-no-pipeline` remain attended-only and are refused while the away record exists.
 A merge under away authority must be synchronous; `fm-pr-merge.sh` refuses auto-merge and any GitHub queue state that cannot prove an immediate merge while the away record exists.

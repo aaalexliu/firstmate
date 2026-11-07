@@ -48,16 +48,11 @@ META="$STATE/$ID.meta"
 # shellcheck source=bin/fm-wake-lib.sh
 . "$SCRIPT_DIR/fm-wake-lib.sh"
 "$FM_ROOT/bin/fm-guard.sh" || true
-# Role partition: landing local-only work is MAIN-owned; the Pi supervision
-# branch reports readiness and never lands (contract: bin/fm-lease-lib.sh;
-# no-op in homes without a branch actor). This action is deliberately NOT
-# relocated under the away-posture record: unlike the PR merge it has no
-# record-side grant gate of its own, so a parked main keeps it held for the
-# captain's return. This precedes reading the task record, because the wrong
-# actor is refused for its role whatever it says.
 # shellcheck source=bin/fm-lease-lib.sh
 . "$SCRIPT_DIR/fm-lease-lib.sh"
-fm_lease_forbid_branch "local-only landing (fm-merge-local)"
+fm_lease_forbid_branch "local-only landing (fm-merge-local)" --away-relocated
+# shellcheck source=bin/fm-merge-authority-lib.sh
+. "$SCRIPT_DIR/fm-merge-authority-lib.sh"
 
 [ -f "$META" ] || { echo "error: no meta for task $ID at $META" >&2; exit 1; }
 if ! fm_backlog_meta_spawn_gen_optional "$META" "$STATE"; then
@@ -74,6 +69,7 @@ MERGE_CONTROL_LOCK=
 MERGE_META_LOCK=
 MERGE_PROJECT_LOCK=
 merge_control_cleanup() {
+  fm_afk_contract_lock_release || true
   [ -z "$MERGE_PROJECT_LOCK" ] || fm_lock_release "$MERGE_PROJECT_LOCK" || true
   [ -z "$MERGE_META_LOCK" ] || fm_lock_release "$MERGE_META_LOCK" || true
   [ -z "$MERGE_CONTROL_LOCK" ] || fm_lock_release "$MERGE_CONTROL_LOCK" || true
@@ -176,6 +172,12 @@ if [ "$(fm_dod_local_done_head "$META")" != "$MERGE_HEAD" ] || ! local_head_matc
   echo "error: local done head or branch changed during approval check; refusing" >&2
   exit 1
 fi
+fm_afk_contract_lock_hold "$STATE" || exit 1
+fm_lease_forbid_branch "local-only landing (fm-merge-local)" --away-relocated
+if ! fm_merge_authority_resolve "$FM_HOME" "$STATE" "$META" "$ID"; then
+  echo "error: local merge refused: the away-posture record could not be read" >&2
+  exit 1
+fi
 merge_status=0
 # Stage the fast-forward with Git's two-tree checkout, which preserves local
 # changes made since the clean-tree check and refuses obstructing files.
@@ -195,6 +197,7 @@ if [ "$merge_status" -ne 0 ]; then
     exit 1
   }
 fi
+fm_afk_contract_lock_release || true
 fm_lock_release "$MERGE_META_LOCK" || true
 MERGE_META_LOCK=
 fm_lock_release "$MERGE_CONTROL_LOCK" || true

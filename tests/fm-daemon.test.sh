@@ -1727,24 +1727,32 @@ test_escalate_batches_into_one_digest() {
 }
 
 test_away_digest_carries_standing_authority_but_quiet_is_unchanged() {
-  local mode dir state sent capture digest
-  for mode in away quiet; do
+  local mode dir state sent capture digest home data_override expected_data
+  for mode in away away-override away-default quiet; do
     dir=$(make_supercase "standing-authority-$mode")
+    home="$dir"
+    data_override=
+    case "$mode" in
+      away-override) data_override="$dir/private-data" ;;
+      away-default) home="$ROOT" ;;
+    esac
+    expected_data=${data_override:-$home/data}
     state="$dir/state"
     sent="$dir/sent.log"; : > "$sent"
     capture="$dir/pane.txt"; printf '\342\235\257 \n' > "$capture"
-    FM_STATE_OVERRIDE="$state" FM_AFK_MODE="$mode" "$ROOT/bin/fm-afk-contract.sh" enter >/dev/null \
+    FM_STATE_OVERRIDE="$state" FM_AFK_MODE="${mode%%-*}" "$ROOT/bin/fm-afk-contract.sh" enter >/dev/null \
       || fail "could not enter $mode posture"
     escalate_add "$state" 'review-stop needs an answer'
     afk_enter "$state"
     PATH="$dir/fakebin:$PATH" FM_FAKE_TMUX_PANE_ALIVE=1 FM_FAKE_TMUX_SENT="$sent" \
-      FM_FAKE_TMUX_CAPTURE="$capture" FM_ESCALATE_BATCH_SECS=0 escalate_flush "$state" \
+      FM_FAKE_TMUX_CAPTURE="$capture" FM_ESCALATE_BATCH_SECS=0 FM_HOME="$home" \
+      FM_DATA_OVERRIDE="$data_override" escalate_flush "$state" \
       || fail "could not deliver $mode digest"
     digest=$(delivered_digest "$sent")
-    if [ "$mode" = away ]; then
+    if [ "$mode" != quiet ]; then
       assert_contains "$digest" 'decide as main would attended under standing rules' "daemon retains words-only authority"
       assert_contains "$digest" 'data/captain.md, data/captain-shared.md, and data/learnings.md' "daemon lacks home rule inputs"
-      assert_contains "$digest" 'FM_DATA_OVERRIDE or FM_HOME/data' "daemon may read code-root data instead of the home"
+      assert_contains "$digest" "resolved home data directory '$expected_data'" "daemon did not deliver the resolved home data path"
       assert_contains "$digest" 'Record standing-authority decisions and their rules' "daemon decisions lack a return audit"
     else
       assert_not_contains "$digest" 'Away decision procedure:' "away relocation changed quiet-mode instructions"

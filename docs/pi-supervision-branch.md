@@ -584,7 +584,8 @@ A leftover `state/.afk` flag declines nothing.
 - The wake message ends with a fixed `POSTURE: AWAY` tail plus the record's read-back verbatim (`bin/fm-afk-contract.sh readback`).
   The branch therefore has the captain's away words, the spend cap, the expected return, and the reach line in front of it at execution time, without any prefix change.
   That tail also directs it to read the tracked `AGENTS.md`, the home's current `data/captain.md`, `data/captain-shared.md`, and `data/learnings.md`, and applicable skills before deciding.
-  Home inputs resolve from `FM_DATA_OVERRIDE` or `FM_HOME/data`, not the code-root working directory; a read instruction keeps private and changing rules out of the cached prefix.
+  Home inputs resolve from `FM_DATA_OVERRIDE`, otherwise `FM_HOME/data`, otherwise the tracked code root's `data/` when `FM_HOME` is unset; never substitute another code root for an explicit home.
+  A read instruction keeps private and changing rules out of the cached prefix.
 - Captain-verdict outcomes accumulate unprocessed in the outcome store.
   Their visible entries still persist, but no processing turn opens on the parked main.
   The request is re-checked against the record immediately before it would open and at every run boundary, so a request pending when the record appears is cancelled rather than delivered.
@@ -614,13 +615,13 @@ Each relocated script keeps its own gate, enforcing exactly what a script can ch
 | Script | Gate while away |
 | --- | --- |
 | `bin/fm-pr-merge.sh` | Permits only green, synchronous merges under the record lock, refusing `--allow-red`, `--allow-missing`, and `--allow-no-pipeline`; the session applies standing merge authority plus additions or restrictions in the words. |
+| `bin/fm-merge-local.sh` | Lands authorized green, in-scope local-only work through its existing pinned-head, clean fast-forward, hold, and lock guards, with a live authority recheck under the record lock. |
 | `bin/fm-spawn.sh` | Dispatches only queued unblocked work authorized under standing rules or away words; enforces the record's spend cap for both actors (relaunches and secondmates exempt). |
 | `bin/fm-send.sh --resolve-key` | Relocates decision answers; the session applies the same standing rules and `ask-user-authority` policy as attended main, plus the away words. |
-| `bin/fm-merge-local.sh` | Never relocated. |
 
 The merge-authority record and the outcome row's summary are the audit trail.
 The return brief renders the words verbatim beside that account and lists standing-authority decisions with the rule relied on so the captain can reverse them.
-Daemon-backed away sessions use the same decision rule and record audit outcomes as directed by the `/afk` skill.
+Every away wake handled by main while the live record exists uses the same decision rule and records audit outcomes as directed by the `/afk` skill, including daemon delivery, Pi branch declines or failures, host handbacks, and no-engine wakes.
 
 ### The authority invariant
 
@@ -629,7 +630,7 @@ Being away changes how the captain is informed and what happens at a captain-own
 It sets these limits:
 
 - The never-set (credential entry, legal or financial acceptance, an attended prompt, an unnamed discard, a destructive, irreversible, or security-sensitive action) has no guarded entrypoint that accepts away authority for either actor.
-- A forced teardown stays refused for the branch, and local-only landing never relocates.
+- A forced teardown stays refused for the branch; local-only landing relocates only under a valid live away record and retains every landing guard.
 - A red merge or a merge with an unreported required check is refused in this posture whatever the words say.
 - The record's spend cap still binds both actors.
 - No relocation survives the return, because an archived record validates as absent and the words die with it.
@@ -667,7 +668,7 @@ The generated prompt includes the [scout-completion](../.agents/skills/scout-com
 - The emitted completed-scout cleanup instructions and verbatim completion policies, including incomplete-work boundaries and refusal reporting; these assertions verify prompt delivery, not a model's adherence.
 - Store append-only behavior, the captain cursor barrier, processed-marker sequence bounds and absent-marker safety, and captain-only recorded ages.
 - Leases, guards, and non-branch-home invariance.
-- The away relocation: only under a valid live record, never for local-only landing, queued-only branch dispatch rather than orphaned in-flight recovery, the spend cap for both actors and its lock-held recheck, and the attended guarded-action behavior restored by archive or an invalid record.
+- The away relocation: only under a valid live record, including guarded local-only landing, queued-only branch dispatch rather than orphaned in-flight recovery, the spend cap for both actors and its lock-held recheck, and the attended guarded-action behavior restored by archive or an invalid record.
 
 `tests/fm-afk-return.test.sh` covers the ordered cleanup-due section, its durable merge-marker requirement, and exclusion of both a done task without durable merge evidence and a persistent secondmate carrying that evidence.
 
