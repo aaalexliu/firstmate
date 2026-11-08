@@ -362,8 +362,8 @@ pass "public start never claims an inherited caller process group"
 
 # --- an unhandled result remains eligible for re-announcement on restart ----
 # A result is durable but nothing has ever acknowledged handling it. Every
-# reconcile call - not just the first restart after a crash - must keep
-# re-announcing it, because the only thing that stops re-announcement is an
+# reconcile call after a drain - not just the first restart after a crash - must
+# keep re-announcing it, because the only thing that stops re-announcement is an
 # explicit handled acknowledgement, never a prior publication.
 H2="$TMP_ROOT/h2"; new_home "$H2"
 future_status=0
@@ -400,6 +400,20 @@ case "$repeat_out" in
   handled:*) fail "a repeat acknowledgement re-authorized a second handled effect: $repeat_out" ;;
 esac
 pass "an unhandled result survives restart and repeat drains, and only explicit acknowledgement stops its re-announcement"
+
+# --- an unhandled result still waiting in the queue is not queued again ------
+# The watcher reconciles on every poll while firstmate is still handling the
+# first announcement. Each extra row would reopen that handling episode as
+# watcher downtime and trigger another resurface wake.
+HWAIT="$TMP_ROOT/hwait"; new_home "$HWAIT"
+mkdir -p "$HWAIT/state/procevent-inbox"
+printf 'slow result\n' > "$HWAIT/state/procevent-inbox/src-wait.1.result"
+printf 'lavish\n' > "$HWAIT/state/procevent-inbox/src-wait.1.adapter"
+chmod 0600 "$HWAIT/state/procevent-inbox/src-wait.1.result" "$HWAIT/state/procevent-inbox/src-wait.1.adapter"
+for _ in 1 2 3; do pe "$HWAIT" reconcile >/dev/null; done
+[ "$(wake_payloads "$HWAIT" | wc -l | tr -d ' ')" = 1 ] \
+  || fail "repeated reconciles queued the same unhandled result more than once"
+pass "repeated reconciles on an unhandled result still in the queue append exactly one row"
 
 HRACE="$TMP_ROOT/hrace"; new_home "$HRACE"
 mkdir -p "$HRACE/state/procevent-inbox"
