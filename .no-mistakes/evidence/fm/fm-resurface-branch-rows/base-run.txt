@@ -1,0 +1,45 @@
+=== [base] S1: result captured; first watcher reconcile
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+queue rows=1
+1	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [base] firstmate drains (begins handling, no ack yet)
+drain exit=0
+recovery marker: pending:handling:55267.1794177154.bwajwz
+=== [base] S2: watcher polls reconcile 5x while firstmate still handling
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 1: rows=2 marker=pending:downtime:55267.1794177154.bwajwz
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 2: rows=3 marker=pending:downtime:55267.1794177154.bwajwz
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 3: rows=4 marker=pending:downtime:55267.1794177154.bwajwz
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 4: rows=5 marker=pending:downtime:55267.1794177154.bwajwz
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 5: rows=6 marker=pending:downtime:55267.1794177154.bwajwz
+1	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+2	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+3	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+4	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+5	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+6	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [base] S3: firstmate acknowledges queued row (not yet handled); next reconcile
+ack exit=0 rows after ack=0
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+rows after reconcile=1
+7	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [base] S4: a different unhandled result (seq 2) arrives while seq 1 row is queued
+reconciled: published=2 started=0 stopped=0 uncertain=0 failed=0
+reconciled: published=2 started=0 stopped=0 uncertain=0 failed=0
+rows=5
+7	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+8	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+9	check	procevent:review-pilot:2	check: procevent lavish review-pilot 2
+10	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+11	check	procevent:review-pilot:2	check: procevent lavish review-pilot 2
+=== [base] S5: mark both handled, drain-ack, reconcile publishes nothing
+handled: review-pilot 1
+handled: review-pilot 2
+rows after ack=0
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=0
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=0
+rows after 2 reconciles=0

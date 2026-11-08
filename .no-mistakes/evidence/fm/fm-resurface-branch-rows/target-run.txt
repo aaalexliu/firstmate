@@ -1,0 +1,37 @@
+=== [target] S1: result captured; first watcher reconcile
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+queue rows=1
+1	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [target] firstmate drains (begins handling, no ack yet)
+drain exit=0
+recovery marker: pending:handling:51342.1794177145.jRo8Ts
+=== [target] S2: watcher polls reconcile 5x while firstmate still handling
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 1: rows=1 marker=pending:handling:51342.1794177145.jRo8Ts
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 2: rows=1 marker=pending:handling:51342.1794177145.jRo8Ts
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 3: rows=1 marker=pending:handling:51342.1794177145.jRo8Ts
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 4: rows=1 marker=pending:handling:51342.1794177145.jRo8Ts
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+  poll 5: rows=1 marker=pending:handling:51342.1794177145.jRo8Ts
+1	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [target] S3: firstmate acknowledges queued row (not yet handled); next reconcile
+ack exit=0 rows after ack=0
+reconciled: published=1 started=0 stopped=0 uncertain=0 failed=0
+rows after reconcile=1
+2	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+=== [target] S4: a different unhandled result (seq 2) arrives while seq 1 row is queued
+reconciled: published=2 started=0 stopped=0 uncertain=0 failed=0
+reconciled: published=2 started=0 stopped=0 uncertain=0 failed=0
+rows=2
+2	check	procevent:review-pilot:1	check: procevent lavish review-pilot 1
+3	check	procevent:review-pilot:2	check: procevent lavish review-pilot 2
+=== [target] S5: mark both handled, drain-ack, reconcile publishes nothing
+handled: review-pilot 1
+handled: review-pilot 2
+rows after ack=0
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=0
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=0
+rows after 2 reconciles=0
